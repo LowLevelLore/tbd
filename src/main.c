@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "headers/environment.h"
 #include "parser.c"
 #include "utils/colors.h"
 #include "utils/logging.h"
@@ -49,7 +50,8 @@ int main(int argc, char *argv[]) {
         char *filename = argv[1];
         char *contents = file_contents(filename);
         // printf("%s", contents);
-        Error err = parse(contents);
+        Node ROOT;
+        Error err = parse(contents, ROOT);
         log_error(&err);
     }
     return 0;
