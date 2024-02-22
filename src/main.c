@@ -47,7 +47,6 @@ int main(int argc, char *argv[]) {
   } else {
     char *filename = argv[1];
     char *contents = file_contents(filename);
-    // printf("%s", contents);
     Node ROOT;
     Error err = parse(contents, ROOT);
     log_error(&err);
