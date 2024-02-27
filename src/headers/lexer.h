@@ -9,17 +9,15 @@
 #include "../utils/errors.h"
 #include "../utils/logging.h"
 
-const char* WHITESPACE = " \r\n";
-const char* DELIMETER = " \r\n,():";
+const char *WHITESPACE = " \r\n";
+const char *DELIMETER = " \r\n,():";
 
 typedef struct Token {
-    char* beginning;
-    char* end;
-    struct Token* next;
+  char *beginning;
+  char *end;
+  struct Token *next;
 } Token;
 
-Token* create_token();
-
-Error lex(char*, Token*);
+Error lex(char *, Token *);
 
 #endif
