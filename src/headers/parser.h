@@ -10,6 +10,6 @@
 
 bool parse_int(Token *, Node *);
 void free_tokens(Token *);
-Error parse(char *, Node);
+Error parse(char *, char **, Node *);
 
 #endif

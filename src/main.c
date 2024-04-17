@@ -2,8 +2,10 @@
 #include <stdlib.h>
 
 #include "headers/environment.h"
+#include "headers/parser.h"
 #include "parser.c"
 #include "utils/colors.h"
+#include "utils/errors.h"
 #include "utils/logging.h"
 
 int file_size(FILE *file) {
@@ -17,6 +19,9 @@ char *file_contents(char *filepath) {
   FILE *file = fopen(filepath, "r");
   if (!file) {
     char *message = (char *)malloc(400 * sizeof(char));
+    if (!message) {
+      log_system_errors("COULD NOT ALLOCATE BUFFER FOR FILE CONTENTS");
+    }
     sprintf(message, "File not Found at path : %s", filepath);
     log_system_errors(message);
     free(message);
@@ -47,9 +52,20 @@ int main(int argc, char *argv[]) {
   } else {
     char *filename = argv[1];
     char *contents = file_contents(filename);
-    Node ROOT;
-    Error err = parse(contents, ROOT);
+    Node expression;
+    char *contents_it = contents;
+    char *contents_it_last = NULL;
+    Error err = OK;
+    while ((err = parse(contents_it, &contents_it, &expression)).type ==
+           ERROR_NULL) {
+      if (contents_it == contents_it_last) {
+        break;
+      }
+      print_node(&expression, 0);
+      contents_it_last = contents_it;
+    }
     log_error(&err);
+    free(contents);
   }
   return 0;
 }

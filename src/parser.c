@@ -10,29 +10,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-void free_tokens(Token *root) {
-  while (root) {
-    Token *current = root;
-    root = root->next;
-    free(current);
-  }
-}
-
-void print_tokens_ll(Token *root) {
-  size_t count = 1;
-  while (root) {
-    if (count > 1000) {
-      break;
-    }
-    printf("Token %zu : ", count);
-    if (root->beginning && root->end) {
-      printf("%.*s\n", (int)(root->end - root->beginning), root->beginning);
-    }
-    root = root->next;
-    count++;
-  }
-}
-
 bool token_equals_string(Token *token, char *string) {
   char *beg = token->beginning;
   if (!string || !token) {
@@ -101,12 +78,16 @@ bool parse_int(Token *token, Node *node) {
   if (!token || !node) {
     return false;
   } else {
+    char *end = NULL;
     if ((token->end - token->beginning) == 1 && *(token->beginning) == '0') {
       node->type = NODE_TYPE_INTEGER;
       node->value.tbd_integer = 0;
       return true;
     } else if ((node->value.tbd_integer =
-                    strtoll(token->beginning, NULL, 10)) != 0) {
+                    strtoll(token->beginning, &end, 10)) != 0) {
+      if (end != token->end) {
+        return 0;
+      }
       node->type = NODE_TYPE_INTEGER;
       return true;
     } else {
@@ -116,37 +97,44 @@ bool parse_int(Token *token, Node *node) {
   return false;
 }
 
-Error parse(char *contents, Node result) {
+void print_token(Token *token) {
+  if (!token) {
+    return;
+  } else {
+    printf("%.*s", (int)(token->end - token->beginning), token->beginning);
+  }
+}
+
+Error parse(char *contents, char **end, Node *result) {
   Error err = OK;
 
   Token current_token;
-  current_token.next = NULL;
   current_token.beginning = contents;
   current_token.end = contents;
 
   Node *root = calloc(1, sizeof(Node));
   if (!root) {
     err.type = ERROR_GENERIC;
+    putchar('\n');
     err.message = "Cannot allocate memory for ROOT Node of AST";
     return err;
   }
   root->type = NODE_TYPE_PROGRAM;
 
-  Node working_node;
-  working_node.type = NODE_TYPE_NULL;
-  working_node.next_child = NULL;
-  working_node.children = NULL;
-  working_node.value.tbd_integer = 0;
-
   while ((err = lex(current_token.end, &current_token)).type == ERROR_NULL) {
+    *end = current_token.end;
     int token_size = current_token.end - current_token.beginning;
     if (token_size == 0) {
       break;
     }
-    if (parse_int(&current_token, &working_node)) {
-      printf("Found Integer : ");
-      print_node(&working_node, 0);
+    if (parse_int(&current_token, result)) {
+      print_node(result, 0);
+    } else {
+      printf("Unrecognised Token : ");
+      print_token(&current_token);
       putchar('\n');
+      Node symbol;
+      symbol.type = NODE_TYPE_SYMBOL;
     }
   }
 

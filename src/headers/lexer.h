@@ -15,7 +15,6 @@ const char *DELIMETER = " \r\n,():";
 typedef struct Token {
   char *beginning;
   char *end;
-  struct Token *next;
 } Token;
 
 Error lex(char *, Token *);
