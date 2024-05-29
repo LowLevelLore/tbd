@@ -8,8 +8,18 @@
 #include "environment.h"
 #include "lexer.h"
 
+typedef struct ParsingContext
+{
+    Environment *types;
+    Environment *variables;
+} ParsingContext;
+
+ParsingContext *parse_context_create();
 bool parse_int(Token *, Node *);
 void free_tokens(Token *);
-Error parse(char *, char **, Node *);
+Error parse_expr(ParsingContext *,
+                 char *,
+                 char **,
+                 Node *);
 
 #endif

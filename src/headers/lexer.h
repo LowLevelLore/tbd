@@ -12,11 +12,13 @@
 const char *WHITESPACE = " \r\n";
 const char *DELIMETER = " \r\n,():";
 
-typedef struct Token {
+typedef struct Token
+{
   char *beginning;
   char *end;
 } Token;
 
+bool token_equals_string(Token *, char *);
 Error lex(char *, Token *);
 
 #endif

@@ -8,64 +8,83 @@
 #include "utils/errors.h"
 #include "utils/logging.h"
 
-int file_size(FILE *file) {
+int file_size(FILE *file)
+{
   fseek(file, 0, SEEK_END);
   int size = ftell(file);
   fseek(file, 0, SEEK_SET);
   return size;
 }
 
-char *file_contents(char *filepath) {
+char *file_contents(char *filepath)
+{
   FILE *file = fopen(filepath, "r");
-  if (!file) {
+  if (!file)
+  {
     char *message = (char *)malloc(400 * sizeof(char));
-    if (!message) {
+    if (!message)
+    {
       log_system_errors("COULD NOT ALLOCATE BUFFER FOR FILE CONTENTS");
     }
     sprintf(message, "File not Found at path : %s", filepath);
     log_system_errors(message);
     free(message);
     exit(0);
-  } else {
+  }
+  else
+  {
     int size = file_size(file);
     char *contents = (char *)malloc((size + 1) * sizeof(char));
     size_t bytes_read = fread(contents, 1, size, file);
-    if (bytes_read != (size_t)size) {
+    if (bytes_read != (size_t)size)
+    {
       free(contents);
       return NULL;
-    } else {
+    }
+    else
+    {
       contents[size] = '\0';
       return contents;
     }
   }
 }
 
-void print_usage(char **argv) {
+void print_usage(char **argv)
+{
   printf("%sUSAGE: %s <path_to_file_to_compile>%s\n", RED, argv[0],
          COLOR_RESET);
 }
 
-int main(int argc, char *argv[]) {
-  if (argc < 2) {
+int main(int argc, char *argv[])
+{
+  if (argc < 2)
+  {
     print_usage(argv);
     exit(0);
-  } else {
+  }
+  else
+  {
     char *filename = argv[1];
     char *contents = file_contents(filename);
-    Node expression;
-    char *contents_it = contents;
-    char *contents_it_last = NULL;
-    Error err = OK;
-    while ((err = parse(contents_it, &contents_it, &expression)).type ==
-           ERROR_NULL) {
-      if (contents_it == contents_it_last) {
-        break;
-      }
-      print_node(&expression, 0);
-      contents_it_last = contents_it;
+    if (contents)
+    {
+      ParsingContext *context = parse_context_create();
+      Node *program = node_allocate();
+      program->type = NODE_TYPE_PROGRAM;
+      Node *expression = node_allocate();
+      memset(expression, 0, sizeof(Node));
+      char *contents_it = contents;
+      Error err = parse_expr(context, contents_it, &contents_it, expression);
+      node_add_child(program, expression);
+
+      log_error(&err);
+
+      print_node(program, 0);
+      putchar('\n');
+
+      free_nodes(program);
+      free(contents);
     }
-    log_error(&err);
-    free(contents);
   }
   return 0;
 }

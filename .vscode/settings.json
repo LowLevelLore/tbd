@@ -3,6 +3,7 @@
   "files.associations": {
     "errors.h": "c",
     "string.h": "c",
-    "cstdlib": "c"
+    "cstdlib": "c",
+    "stdbool.h": "c"
   }
 }
