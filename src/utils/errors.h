@@ -16,5 +16,12 @@ typedef struct Error {
     char *message;
 } Error;
 
+#define ERROR_PREP(err, etype, msg)                                            \
+    {                                                                          \
+        err.type = etype;                                                      \
+        err.message = msg;                                                     \
+    }
+
 Error OK = {ERROR_NULL, NULL};
+
 #endif

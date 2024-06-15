@@ -1,10 +1,10 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -O3
-LDFLAGS = -lstdc++
+LDFLAGS = -lstdc++ -lc
 
 all: main.o
 	@$(CC) $(CFLAGS) build/main.o -o build/tbd
-	@rm -rf main.o
+	@rm -rf build/main.o
 
 main.o: src/main.c
 	@mkdir -p build

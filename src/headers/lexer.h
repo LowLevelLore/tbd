@@ -9,13 +9,14 @@
 #include "../utils/errors.h"
 #include "../utils/logging.h"
 
+const char *NEWLINE = "\r\n";
+const char *COMMENT_DEIMETER = "#";
 const char *WHITESPACE = " \r\n";
 const char *DELIMETER = " \r\n,():";
 
-typedef struct Token
-{
-  char *beginning;
-  char *end;
+typedef struct Token {
+    char *beginning;
+    char *end;
 } Token;
 
 bool token_equals_string(Token *, char *);

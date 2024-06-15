@@ -1,0 +1,5 @@
+25 May 2024, Working on Parser, Video : 3, Timeline : 1:07:28
+25 May 2024, Working on Parser, Video : 3, Timeline : 1:32:06
+30 May 2024, Working on Parser, Video : 4, Timeline : 0:50:00
+15 June 2024, Working on Parser [Refactoring, which i did by default], Video : 5, Timeline : 1:00:00
+15 June 2024, Working on Parser [Now work on comments], Video : 6, Timeline : 0:13:00
