@@ -1,6 +1,5 @@
 #include "headers/environment.h"
 
-
 Environment *environment_create(Environment *parent) {
     Environment *env = (Environment *)malloc(sizeof(Environment));
     assert(env && "Unable to allocate memory for environment.");
@@ -92,7 +91,7 @@ void print_node(Node *node, size_t indent_level) {
     for (size_t i = 0; i < indent_level; ++i) {
         putchar(' ');
     }
-    printf(BRED);
+    printf(BCYN);
     switch (node->type) {
     default:
         printf("[UNKNOWN]");
@@ -118,6 +117,9 @@ void print_node(Node *node, size_t indent_level) {
     case NODE_TYPE_VARIABLE_DECLARATION_WITH_INITIALIZATION:
         printf("[VARIABLE DECLARATION INITIALIZED]");
         break;
+    case NODE_TYPE_VARIABLE_REASSIGNMENT:
+        printf("VARIABLE REASSIGNMENT");
+        break;
     case NODE_TYPE_PROGRAM:
         printf("[PROGRAM] : ");
         break;
@@ -129,6 +131,37 @@ void print_node(Node *node, size_t indent_level) {
         print_node(child, indent_level + 4);
         child = child->next_child;
     }
+}
+
+Error node_add_type(Environment *types, int type, Node *type_symbol,
+                    long long byte_size) {
+    assert(types && "Can not add type to NULL types environment");
+    assert(type_symbol && "Can not add NULL type symbol to types environment");
+    assert(byte_size >= 0 &&
+           "Can not define new type with zero or negative byte size");
+
+    Node *size_node = node_allocate();
+    size_node->type = NODE_TYPE_INTEGER;
+    size_node->value.tbd_integer = byte_size;
+
+    Node *type_node = node_allocate();
+    type_node->type = type;
+    type_node->children = size_node;
+
+    if (environment_set(types, type_symbol, type_node) == 1) {
+        return OK;
+    }
+    // TYPE REDEFINITION ERROR
+    printf("Type that was redefined: \"%s\"\n", type_symbol->value.symbol);
+    Error err;
+    ERROR_PREP(err, ERROR_TYPE, "Redefinition of type!");
+    return err;
+}
+
+Node *node_none() {
+    Node *none = node_allocate();
+    none->type = NODE_TYPE_NULL;
+    return none;
 }
 
 int node_compare(Node *a, Node *b) {
@@ -174,6 +207,10 @@ int node_compare(Node *a, Node *b) {
         break;
     case NODE_TYPE_BINARY_OPERATOR:
         printf("TODO: node_compare() BINARY OPERATOR\n");
+        break;
+
+    case NODE_TYPE_VARIABLE_REASSIGNMENT:
+        printf("TODO: node_compare() NODE TYPE VARIABLE REASSIGNMENT\n");
         break;
     case NODE_TYPE_VARIABLE_DECLARATION:
         printf("TODO: node_compare() VARIABLE DECLARATION\n");
@@ -223,4 +260,41 @@ Node *node_symbol(char *symbol_string) {
     symbol->type = NODE_TYPE_SYMBOL;
     symbol->value.symbol = strdup(symbol_string);
     return symbol;
+}
+
+bool node_copy(Node *source, Node *destination) {
+    if (!source || !destination) {
+        return false;
+    } else {
+        memcpy(destination, source, sizeof(Node));
+        destination->type = source->type;
+        switch (source->type) {
+        case NODE_TYPE_SYMBOL:
+            strcpy(destination->value.symbol, source->value.symbol);
+            assert(destination->value.symbol &&
+                   "node_copy(): Could not allocate memory for new symbol.");
+
+            break;
+
+        default:
+            destination->value = source->value;
+            break;
+        }
+
+        Node *child = source->children;
+        Node *child_it = NULL;
+        while (child) {
+            Node *new_child = node_allocate();
+            if (child_it) {
+                child_it->next_child = new_child;
+            } else {
+                destination->children = new_child;
+                child_it = new_child;
+            }
+            node_copy(child, new_child);
+            child = child->next_child;
+        }
+
+        return true;
+    }
 }

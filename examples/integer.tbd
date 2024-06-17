@@ -1,8 +1,14 @@
 a : integer = 69
 
+a := 420
+
 b : integer
 b := 42
 
-defun foo (a:integer, b:integer):integer {
+b : integer
 
+defun foo (a:integer, b:integer):integer {
+  # TODO: How do we return things?
 }
+
+foo(20, 34)

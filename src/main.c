@@ -68,19 +68,20 @@ int main(int argc, char *argv[]) {
             memset(expression, 0, sizeof(Node));
             char *contents_it = contents;
 
-            while (true) {
+            for (;;) {
                 Error err =
                     parse_expr(context, contents_it, &contents_it, expression);
-                if (!*contents_it) {
-                    break;
-                }
                 if (err.type != ERROR_NULL) {
                     log_error(&err);
                     break;
                 }
-                node_add_child(program, expression);
+                if (!(*contents_it)) {
+                    break;
+                }
+                Node *child = node_allocate();
+                node_copy(expression, child);
+                node_add_child(program, child);
             }
-
             print_node(program, 0);
             putchar('\n');
 

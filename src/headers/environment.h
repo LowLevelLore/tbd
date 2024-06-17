@@ -18,6 +18,7 @@ typedef enum NodeType {
     NODE_TYPE_SYMBOL,
     NODE_TYPE_BINARY_OPERATOR,
     NODE_TYPE_VARIABLE_DECLARATION,
+    NODE_TYPE_VARIABLE_REASSIGNMENT,
     NODE_TYPE_VARIABLE_DECLARATION_WITH_INITIALIZATION,
     NODE_TYPE_INTEGER,
     NODE_TYPE_FLOAT,
@@ -63,5 +64,6 @@ Node *node_symbol_from_buffer(char *, size_t);
 Node *node_integer(long long);
 Node *node_float(double);
 Node *node_symbol(char *);
+bool node_copy(Node *source, Node *destination);
 
 #endif

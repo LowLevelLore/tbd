@@ -3,3 +3,6 @@
 30 May 2024, Working on Parser, Video : 4, Timeline : 0:50:00
 15 June 2024, Working on Parser [Refactoring, which i did by default], Video : 5, Timeline : 1:00:00
 15 June 2024, Working on Parser [Now work on comments], Video : 6, Timeline : 0:13:00
+16 June 2024, Working on Parser [Single line comments done, Now Fixing assiggnment], Video : 6, Timeline : 1:51:00
+16 June 2024, Working on Parser [Fuck Parsing], Video : 6, Timeline : Done
+17 June 2024, Working on Parser [Fuck Parsing], Video : 8, Timeline : 00:05:00

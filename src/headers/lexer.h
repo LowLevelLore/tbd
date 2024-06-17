@@ -3,6 +3,7 @@
 #define _TBD_HEADERS_LEXER_GUARD
 
 #include <assert.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -19,7 +20,26 @@ typedef struct Token {
     char *end;
 } Token;
 
-bool token_equals_string(Token *, char *);
+typedef struct ExpectReturnValue {
+    Error err;
+    char found;
+    char done;
+} ExpectReturnValue;
+
+#define EXPECT(expected, expected_string, current_token, current_length, end)  \
+    expected =                                                                 \
+        lex_expect(expected_string, &current_token, &current_length, end);     \
+    if (expected.err.type) {                                                   \
+        return expected.err;                                                   \
+    }                                                                          \
+    if (expected.done) {                                                       \
+        return OK;                                                             \
+    }
+
+bool comment_at_beginning(Token);
+bool token_equals_string(char *, Token *);
 Error lex(char *, Token *);
+Error lex_advance(Token *, size_t *, char **);
+ExpectReturnValue lex_expect(char *, Token *, size_t *, char **);
 
 #endif
