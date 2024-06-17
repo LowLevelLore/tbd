@@ -1,4 +1,7 @@
 #include "headers/environment.h"
+#include "utils/colors.h"
+#include "utils/errors.h"
+#include "utils/logging.h"
 
 Environment *environment_create(Environment *parent) {
     Environment *env = (Environment *)malloc(sizeof(Environment));
@@ -152,7 +155,8 @@ Error node_add_type(Environment *types, int type, Node *type_symbol,
         return OK;
     }
     // TYPE REDEFINITION ERROR
-    printf("Type that was redefined: \"%s\"\n", type_symbol->value.symbol);
+    printf("%sType that was redefined: \"%s\"\n%s", BRED,
+           type_symbol->value.symbol, COLOR_RESET);
     Error err;
     ERROR_PREP(err, ERROR_TYPE, "Redefinition of type!");
     return err;

@@ -1,3 +1,4 @@
+#include "codegen.c"
 #include "headers/environment.h"
 #include "headers/parser.h"
 #include "parser.c"
@@ -55,10 +56,9 @@ int main(int argc, char *argv[]) {
             Node *integer_hopefully = node_allocate();
             bool success = environment_get_by_symbol(*context->types, "integer",
                                                      integer_hopefully);
-            if (success) {
-                print_node(integer_hopefully, 0);
-            } else {
-                printf("Cannot get Node within the environment .\n");
+            if (!success) {
+                printf("%sCannot get Node within the environment. %s\n", BRED,
+                       COLOR_RESET);
             }
             free(integer_hopefully);
 
@@ -84,6 +84,11 @@ int main(int argc, char *argv[]) {
             }
             print_node(program, 0);
             putchar('\n');
+
+            log_message("GENERATING CODE \n\n");
+
+            codegen_program(CODEGEN_OUTPUT_FORMAT_x86_64_AT_T_ASM, context,
+                            program, "test.txt");
 
             free_nodes(program);
             free(contents);

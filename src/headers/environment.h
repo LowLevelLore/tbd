@@ -32,7 +32,7 @@ typedef union NodeValue {
 } NodeValue;
 
 typedef struct Node {
-    NodeType type;
+    int type;
     NodeValue value;
     struct Node *children;
     struct Node *next_child;

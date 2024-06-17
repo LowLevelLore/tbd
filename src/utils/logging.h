@@ -38,4 +38,7 @@ void log_error(Error *err) {
 void log_message(char *message) {
     printf("%sLOG: %s%s\n", BCYN, message, COLOR_RESET);
 }
+
+
+
 #endif

@@ -11,8 +11,11 @@ ParsingContext *parse_context_create(void) {
     ctx = calloc(1, sizeof(ParsingContext));
     assert(ctx && "Could not allocate memory for parsing context.");
     ctx->types = environment_create(NULL);
-    if (environment_set(ctx->types, node_symbol("integer"), node_integer(0)) ==
-        0) {
+    Error err = node_add_type(ctx->types, NODE_TYPE_INTEGER,
+                              node_symbol("inteeger"), sizeof(long long));
+    if ((err.type != ERROR_NULL) ||
+        (environment_set(ctx->types, node_symbol("integer"), node_integer(0)) ==
+         0)) {
         printf("ERROR: Failed to set builtin type in types environment.\n");
     }
     ctx->variables = environment_create(NULL);
