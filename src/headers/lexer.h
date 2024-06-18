@@ -1,6 +1,6 @@
-#ifndef _TBD_HEADERS_LEXER_GUARD
+#ifndef _MZ_HEADERS_LEXER_GUARD
 
-#define _TBD_HEADERS_LEXER_GUARD
+#define _MZ_HEADERS_LEXER_GUARD
 
 #include <assert.h>
 #include <stdbool.h>

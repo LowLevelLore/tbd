@@ -1,6 +1,6 @@
-#ifndef _TBD_HEADERS_ENVIRONMENT_GUARD
+#ifndef _MZ_HEADERS_ENVIRONMENT_GUARD
 
-#define _TBD_HEADERS_ENVIRONMENT_GUARD
+#define _MZ_HEADERS_ENVIRONMENT_GUARD
 
 #include <assert.h>
 #include <stdbool.h>
@@ -26,8 +26,8 @@ typedef enum NodeType {
 } NodeType;
 
 typedef union NodeValue {
-    long long int tbd_integer;
-    double tbd_double;
+    long long int MZ_integer;
+    double MZ_double;
     char *symbol;
 } NodeValue;
 

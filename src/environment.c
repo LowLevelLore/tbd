@@ -103,7 +103,7 @@ void print_node(Node *node, size_t indent_level) {
         printf("[NONE]");
         break;
     case NODE_TYPE_INTEGER:
-        printf("[INT]: %lld", node->value.tbd_integer);
+        printf("[INT]: %lld", node->value.MZ_integer);
         break;
     case NODE_TYPE_SYMBOL:
         printf("[SYM]");
@@ -145,7 +145,7 @@ Error node_add_type(Environment *types, int type, Node *type_symbol,
 
     Node *size_node = node_allocate();
     size_node->type = NODE_TYPE_INTEGER;
-    size_node->value.tbd_integer = byte_size;
+    size_node->value.MZ_integer = byte_size;
 
     Node *type_node = node_allocate();
     type_node->type = type;
@@ -187,13 +187,13 @@ int node_compare(Node *a, Node *b) {
         return 0;
         break;
     case NODE_TYPE_INTEGER:
-        if (a->value.tbd_integer == b->value.tbd_integer) {
+        if (a->value.MZ_integer == b->value.MZ_integer) {
             return 1;
         }
         return 0;
         break;
     case NODE_TYPE_FLOAT:
-        return a->value.tbd_double == b->value.tbd_double;
+        return a->value.MZ_double == b->value.MZ_double;
         break;
     case NODE_TYPE_STRING:
         printf("TODO: Handle NODE_TYPE_STRING comparison");
@@ -244,7 +244,7 @@ Node *node_symbol_from_buffer(char *buffer, size_t length) {
 Node *node_integer(long long value) {
     Node *integer = node_allocate();
     integer->type = NODE_TYPE_INTEGER;
-    integer->value.tbd_integer = value;
+    integer->value.MZ_integer = value;
     integer->children = NULL;
     integer->next_child = NULL;
     return integer;
@@ -253,7 +253,7 @@ Node *node_integer(long long value) {
 Node *node_float(double value) {
     Node *integer = node_allocate();
     integer->type = NODE_TYPE_FLOAT;
-    integer->value.tbd_double = value;
+    integer->value.MZ_double = value;
     integer->children = NULL;
     integer->next_child = NULL;
     return integer;

@@ -1,33 +1,118 @@
 #include "headers/codegen.h"
 
+Error fwrite_(char *bytestring, FILE *file) {
+    Error err;
+    ERROR_PREP(err, ERROR_GENERIC, "fwrite_() cannot write to the output file.")
+    if (!file) {
+        return err;
+    }
+    size_t len = strlen(bytestring);
+    if (fwrite(bytestring, 1, len, file) != len) {
+        return err;
+    }
+    return OK;
+}
+
+Error fwrite_line(char *bytestring, FILE *file) {
+    Error err;
+    ERROR_PREP(err, ERROR_GENERIC,
+               "fwrite_line() cannot write to the output file.")
+    if (!file) {
+        return err;
+    }
+    size_t len = strlen(bytestring);
+    if (fwrite(bytestring, 1, len, file) != len) {
+        return err;
+    }
+    if (fwrite("\n", 1, 1, file) != 1) {
+        return err;
+    }
+    return OK;
+}
+
+Error fwrite_integer(long long integer, FILE *file) {
+    Error err;
+    ERROR_PREP(err, ERROR_GENERIC,
+               "fwrite_integer() cannot write to the output file.")
+    if (!file) {
+        return err;
+    }
+    sprintf(number, "%lld", integer);
+    return fwrite_(number, file);
+}
+
+Error codegen_program_x86_64_att_asm_data_section(ParsingContext *context,
+                                                  FILE *outfile) {
+
+    Error err = OK;
+    err = fwrite_line(".section .data", outfile);
+    ret;
+    Binding *it = context->variables->binding;
+    Node *id, *type_node;
+    Node *size_node = node_allocate();
+    while (it) {
+        id = it->id;
+        type_node = it->value;
+        environment_get(context->types, type_node, size_node);
+        err = fwrite_(id->value.symbol, outfile);
+        ret;
+        err = fwrite_(": .space ", outfile);
+        ret;
+        err = fwrite_integer(size_node->value.MZ_integer, outfile);
+        ret;
+        err = fwrite_("\n", outfile);
+        ret;
+        it = it->next;
+    }
+    return err;
+}
+
 Error codegen_program_x86_64_att_asm(ParsingContext *context, Node *program,
                                      FILE *outfile) {
     Error err = OK;
     Node *expression = program->children;
-    Node *temp_node = node_allocate();
+    fwrite_((char *)";#; ", outfile);
+    fwrite_line((char *)CODEGEN_HEADER, outfile);
+
+    // For all global variables
+    err = codegen_program_x86_64_att_asm_data_section(context, outfile);
+    ret;
+
+    char *lines[6] = {".global _start", ".section .text", "_start: ",
+                      "push %rbp",      "mov %rsp, %rbp", ""};
+
+    for (int i = 0; i < 6; i++) {
+        fwrite_line(lines[i], outfile);
+        ret;
+    }
 
     while (expression) {
         switch (expression->type) {
-        case NODE_TYPE_VARIABLE_DECLARATION:
-            // TODO: Handle nested scopes (stack based variables)
-
-            temp_node = expression->children;
-            print_node(temp_node, 0);
-            print_node(temp_node->next_child, 4);
-            environment_get(context->variables, expression->children,
-                            temp_node);
-            print_node(temp_node, 4);
-            Node *size_node = node_allocate();
-            if (environment_get(context->types, temp_node, size_node)) {
-                print_node(size_node, 8);
-            }
-            break;
-
         default:
+            break;
+        case NODE_TYPE_VARIABLE_REASSIGNMENT:
+            // Expression -> next_child -> next_child ....
+            //       --> [SYM]
+            //       --> [VALUE]
+            err = fwrite_("lea ", outfile);
+            err = fwrite_(expression->children->value.symbol, outfile);
+            err = fwrite_line("(%rip), %rax", outfile);
+            // Assumes to move 8 bytes by default
+            err = fwrite_("movq $", outfile);
+            // Assumes Integer :(
+            err = fwrite_integer(
+                expression->children->next_child->value.MZ_integer, outfile);
+            err = fwrite_line(", (%rax)", outfile);
+            ret;
             break;
         }
         expression = expression->next_child;
     }
+    fwrite_line("", outfile);
+    fwrite_line("pop %rbp", outfile);
+    fwrite_line("ret", outfile);
+    ret;
+
     return err;
 }
 

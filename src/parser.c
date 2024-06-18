@@ -30,8 +30,8 @@ bool parse_int(Token *token, Node *node) {
         if ((token->end - token->beginning) == 1 &&
             *(token->beginning) == '0') {
             node->type = NODE_TYPE_INTEGER;
-            node->value.tbd_integer = 0;
-        } else if ((node->value.tbd_integer =
+            node->value.MZ_integer = 0;
+        } else if ((node->value.MZ_integer =
                         strtoll(token->beginning, &end, 10)) != 0) {
             if (end != token->end) {
                 return (false);
@@ -65,7 +65,7 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
 
     while ((err = lex_advance(&current_token, &token_length, end)).type ==
            ERROR_NULL) {
-        // printf("lexed: "); print_token(current_token); putchar('\n');
+
         if (token_length == 0) {
             return OK;
         }
@@ -81,9 +81,7 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
         }
 
         // TODO: Parse strings and other literal types.
-
         // TODO: Check for unary prefix operators.
-
         // TODO: Check that it isn't a binary operator (we should encounter left
         // side first and peek forward, rather than encounter it at top level).
 

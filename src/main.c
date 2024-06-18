@@ -67,9 +67,9 @@ int main(int argc, char *argv[]) {
             Node *expression = node_allocate();
             memset(expression, 0, sizeof(Node));
             char *contents_it = contents;
-
+            Error err;
             for (;;) {
-                Error err =
+                err =
                     parse_expr(context, contents_it, &contents_it, expression);
                 if (err.type != ERROR_NULL) {
                     log_error(&err);
@@ -82,17 +82,19 @@ int main(int argc, char *argv[]) {
                 node_copy(expression, child);
                 node_add_child(program, child);
             }
-
             free_nodes(expression);
-
             print_node(program, 0);
             putchar('\n');
-
-            log_message("GENERATING CODE \n\n");
-
-            codegen_program(CODEGEN_OUTPUT_FORMAT_x86_64_AT_T_ASM, context,
-                            program, "test.txt");
-
+            if (err.type == ERROR_NULL) {
+                log_message("GENERATING CODE \n\n");
+                err = codegen_program(CODEGEN_OUTPUT_FORMAT_x86_64_AT_T_ASM,
+                                      context, program, "examples/out/test.S");
+                if (err.type != ERROR_NULL)
+                    log_error(&err);
+                else {
+                    log_message("COMPLETED GENERATION\n\n");
+                }
+            }
             free_nodes(program);
             free(contents);
         }

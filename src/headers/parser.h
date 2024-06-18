@@ -1,6 +1,6 @@
-#ifndef _TBD_HEADERS_PARSER_GUARD
+#ifndef _MZ_HEADERS_PARSER_GUARD
 
-#define _TBD_HEADERS_PARSER_GUARD
+#define _MZ_HEADERS_PARSER_GUARD
 
 #include <stdbool.h>
 #include <stdio.h>

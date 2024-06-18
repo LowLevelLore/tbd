@@ -4,3 +4,6 @@ a := 420
 
 b : integer
 b := 42
+
+# Uncomment below to create a parsing error
+# b : integer
