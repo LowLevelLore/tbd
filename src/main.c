@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
             ParsingContext *context = parse_context_create();
 
             Node *integer_hopefully = node_allocate();
-            bool success = environment_get_by_symbol(*context->types, "integer",
+            bool success = environment_get_by_symbol(context->types, "integer",
                                                      integer_hopefully);
             if (!success) {
                 printf("%sCannot get Node within the environment. %s\n", BRED,
@@ -82,6 +82,9 @@ int main(int argc, char *argv[]) {
                 node_copy(expression, child);
                 node_add_child(program, child);
             }
+
+            free_nodes(expression);
+
             print_node(program, 0);
             putchar('\n');
 

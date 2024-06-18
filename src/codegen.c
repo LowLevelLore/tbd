@@ -10,15 +10,17 @@ Error codegen_program_x86_64_att_asm(ParsingContext *context, Node *program,
         switch (expression->type) {
         case NODE_TYPE_VARIABLE_DECLARATION:
             // TODO: Handle nested scopes (stack based variables)
-            // environment_get(*context->variables, expression->children,
-            //                 temp_node);
-            // print_node(temp_node, 0);
-            temp_node = expression->children;
-            while (temp_node) {
-                print_node(temp_node, 0);
-                temp_node = temp_node->next_child;
-            }
 
+            temp_node = expression->children;
+            print_node(temp_node, 0);
+            print_node(temp_node->next_child, 4);
+            environment_get(context->variables, expression->children,
+                            temp_node);
+            print_node(temp_node, 4);
+            Node *size_node = node_allocate();
+            if (environment_get(context->types, temp_node, size_node)) {
+                print_node(size_node, 8);
+            }
             break;
 
         default:

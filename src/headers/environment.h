@@ -53,8 +53,8 @@ void free_nodes(Node *);
 
 Environment *environment_create(Environment *);
 int environment_set(Environment *, Node *, Node *);
-bool environment_get(Environment, Node *, Node *);
-bool environment_get_by_symbol(Environment, char *, Node *);
+bool environment_get(Environment *, Node *, Node *);
+bool environment_get_by_symbol(Environment *, char *, Node *);
 Node *node_allocate();
 void node_add_child(Node *, Node *);
 void free_nodes(Node *);

@@ -32,8 +32,8 @@ int environment_set(Environment *env, Node *id, Node *value) {
     return 1;
 }
 
-bool environment_get(Environment env, Node *id, Node *result) {
-    Binding *binding_it = env.binding;
+bool environment_get(Environment *env, Node *id, Node *result) {
+    Binding *binding_it = env->binding;
     while (binding_it) {
         if (node_compare(binding_it->id, id)) {
             *result = *binding_it->value;
@@ -44,7 +44,7 @@ bool environment_get(Environment env, Node *id, Node *result) {
     return false;
 }
 
-bool environment_get_by_symbol(Environment env, char *symbol, Node *result) {
+bool environment_get_by_symbol(Environment *env, char *symbol, Node *result) {
     Node *sym_node = node_symbol(symbol);
     bool status = environment_get(env, sym_node, result);
     free(sym_node);
@@ -121,7 +121,7 @@ void print_node(Node *node, size_t indent_level) {
         printf("[VARIABLE DECLARATION INITIALIZED]");
         break;
     case NODE_TYPE_VARIABLE_REASSIGNMENT:
-        printf("VARIABLE REASSIGNMENT");
+        printf("[VARIABLE REASSIGNMENT]");
         break;
     case NODE_TYPE_PROGRAM:
         printf("[PROGRAM] : ");
@@ -151,7 +151,7 @@ Error node_add_type(Environment *types, int type, Node *type_symbol,
     type_node->type = type;
     type_node->children = size_node;
 
-    if (environment_set(types, type_symbol, type_node) == 1) {
+    if (environment_set(types, type_symbol, size_node) == 1) {
         return OK;
     }
     // TYPE REDEFINITION ERROR

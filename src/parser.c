@@ -12,10 +12,8 @@ ParsingContext *parse_context_create(void) {
     assert(ctx && "Could not allocate memory for parsing context.");
     ctx->types = environment_create(NULL);
     Error err = node_add_type(ctx->types, NODE_TYPE_INTEGER,
-                              node_symbol("inteeger"), sizeof(long long));
-    if ((err.type != ERROR_NULL) ||
-        (environment_set(ctx->types, node_symbol("integer"), node_integer(0)) ==
-         0)) {
+                              node_symbol("integer"), sizeof(long long));
+    if ((err.type != ERROR_NULL)) {
         printf("ERROR: Failed to set builtin type in types environment.\n");
     }
     ctx->variables = environment_create(NULL);
@@ -104,7 +102,7 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
             if (expected.found) {
 
                 Node *variable_binding = node_allocate();
-                if (!environment_get(*context->variables, symbol,
+                if (!environment_get(context->variables, symbol,
                                      variable_binding)) {
                     // TODO: Add source location or something to the error.
                     // TODO: Create new error type.
@@ -144,7 +142,7 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
             }
             Node *type_symbol =
                 node_symbol_from_buffer(current_token.beginning, token_length);
-            if (environment_get(*context->types, type_symbol, working_result) ==
+            if (environment_get(context->types, type_symbol, working_result) ==
                 0) {
                 ERROR_PREP(err, ERROR_TYPE,
                            "Invalid type within variable declaration");
@@ -153,8 +151,7 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
             }
 
             Node *variable_binding = node_allocate();
-            if (environment_get(*context->variables, symbol,
-                                variable_binding)) {
+            if (environment_get(context->variables, symbol, variable_binding)) {
                 // TODO: Create new error type.
                 printf("ID of redefined variable: \"%s\"\n",
                        symbol->value.symbol);

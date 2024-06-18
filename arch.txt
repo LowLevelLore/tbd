@@ -1,0 +1,6 @@
+ParsingContext : 
+    --> types (Env) :
+            symbol(@type) -> [ node->type = @type ] -> children will contain size_node 
+
+    --> variables (Env) :
+            symbol(@name) -> symbol(@type)
