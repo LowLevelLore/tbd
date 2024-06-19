@@ -9,3 +9,4 @@
 17 June 2024, Working on Parser [Fuck Parsing & Codegen], Video : 8, Timeline : 02:24:00
 18 June 2024, Working on Parser [Fuck Recursion, now we do stack based continuation], Video : 9, Timeline : 00:10:00
 18 June 2024, Working on Codegen [Fuck ASM, especially x86_64 AT&T ASM], Video : 10, Timeline : 01:36:00
+19 June 2024, Working on Codegen [Fuck ABI & libc & ld & as, spent whole day still no outcome], Video : 10, Timeline : 02:12:00

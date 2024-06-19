@@ -108,9 +108,23 @@ Error codegen_program_x86_64_att_asm(ParsingContext *context, Node *program,
         }
         expression = expression->next_child;
     }
+
+    /*
+        TODO: Different exit procedres for linux and windows
+        # Exit for linux
+        movl    $0, %ebx
+        movl    $1, %eax
+        int     $0x80
+        # Exit for Windows
+        movq    $0, %rax
+        ret
+    */
+
     fwrite_line("", outfile);
     fwrite_line("pop %rbp", outfile);
-    fwrite_line("ret", outfile);
+    fwrite_line("movl $0, %ebx", outfile);
+    fwrite_line("movl $1, %eax", outfile);
+    fwrite_line("int $0x80", outfile);
     ret;
 
     return err;
