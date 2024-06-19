@@ -4,3 +4,11 @@ ParsingContext :
 
     --> variables (Env) :
             symbol(@name) -> symbol(@type)
+
+
+
+For Linux:
+        1st argument : rdi
+        2nd argument : rsi
+        3rd argument : rdx
+        PLEASE LEARN THIS
