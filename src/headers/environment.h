@@ -37,6 +37,14 @@ typedef enum NodeType {
     NODE_TYPE_FUNCTION_PARAMS_LIST,
     NODE_TYPE_FUNCTION_PARAM,
     NODE_TYPE_FUNCTION_RETURN_TYPE,
+
+    /*
+        NODE_TYPE_FUNCTION_CALL
+            1. Function Symbol
+            2. Parameter List
+    */
+    NODE_TYPE_FUNCTION_CALL,
+    NODE_TYPE_FUNCTION_ARGS_LIST,
 } NodeType;
 
 typedef union NodeValue {
@@ -66,9 +74,9 @@ typedef struct Environment {
 void free_nodes(Node *);
 
 Environment *environment_create(Environment *);
-int environment_set(Environment*, Node *, Node *);
+int environment_set(Environment *, Node *, Node *);
 bool environment_get(Environment, Node *, Node *);
-bool environment_get_by_symbol(Environment , char *, Node *);
+bool environment_get_by_symbol(Environment, char *, Node *);
 Node *node_allocate();
 void node_add_child(Node *, Node *);
 void free_nodes(Node *);

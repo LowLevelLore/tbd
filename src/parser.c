@@ -10,6 +10,7 @@ ParsingContext *parse_context_default_create() {
     assert(ctx && "Could not allocate memory for parsing context.");
 
     ctx->types = environment_create(NULL);
+    ctx->functions = environment_create(NULL);
     Error err = node_add_type(ctx->types, NODE_TYPE_INTEGER,
                               node_symbol("integer"), sizeof(long long));
     if ((err.type != ERROR_NULL)) {
@@ -23,6 +24,8 @@ ParsingContext *parse_context_create(ParsingContext *parent) {
     ParsingContext *ctx = calloc(1, sizeof(ParsingContext));
     assert(ctx && "Could not allocate memory for parsing context.");
     ctx->parent = parent;
+    ctx->operator= NULL;
+    ctx->result = NULL;
     ctx->types = environment_create(NULL);
     ctx->variables = environment_create(NULL);
     return (ctx);
@@ -212,8 +215,10 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
                 lex_advance(&current_token, &token_length, end);
                 Node *function_return_type = node_symbol_from_buffer(
                     current_token.beginning, token_length);
-                function_return_type->type = NODE_TYPE_FUNCTION_RETURN_TYPE;
-                node_add_child(working_result, function_return_type);
+                Node *function_return = node_allocate();
+                function_return->type = NODE_TYPE_FUNCTION_RETURN_TYPE;
+                node_add_child(function_return, function_return_type);
+                node_add_child(working_result, function_return);
 
                 // Bind function to function name in functions environment.
                 environment_set(context->functions, function_name,
@@ -344,7 +349,25 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
 
                     return OK;
                 } else {
-                    printf("TODO: Function Calls\n");
+                    EXPECT(expected, "(", current_token, token_length, end);
+                    if (expected.found) {
+                        working_result->type = NODE_TYPE_FUNCTION_CALL;
+                        node_add_child(working_result, symbol);
+
+                        Node *arg_list = node_allocate();
+                        arg_list->type = NODE_TYPE_FUNCTION_ARGS_LIST;
+                        Node *arg = node_allocate();
+                        node_add_child(arg_list, arg);
+                        node_add_child(working_result, arg_list);
+                        working_result = arg;
+
+                        context = parse_context_create(context);
+                        context->operator= node_symbol("fncall");
+                        context->result = working_result;
+                        continue;
+                    } else {
+                        // TODO: Check for variable access.
+                    }
                 }
 
                 printf("Unrecognized token: ");
@@ -381,13 +404,12 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
             context->result = working_result;
             continue;
         }
-        if (strcmp(operator->value.symbol, "funcall") == 0) {
+        if (strcmp(operator->value.symbol, "fncall") == 0) {
             EXPECT(expected, ")", current_token, token_length, end);
             if (expected.done || expected.found) {
                 break;
             }
 
-            // FIXME?: Should comma be optional?
             EXPECT(expected, ",", current_token, token_length, end);
             if (expected.done || !expected.found) {
                 print_token(current_token);

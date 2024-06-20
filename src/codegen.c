@@ -45,7 +45,9 @@ Error codegen_program_x86_64_att_asm_data_section(ParsingContext *context,
                                                   FILE *outfile) {
 
     Error err = OK;
-    err = fwrite_line(".section .data", outfile);
+    err = fwrite_("\n", outfile);
+    ret;
+    err = fwrite_line(".section .data\n", outfile);
     ret;
     Binding *it = context->variables->binding;
     Node *id, *type_node;
@@ -64,31 +66,72 @@ Error codegen_program_x86_64_att_asm_data_section(ParsingContext *context,
         ret;
         it = it->next;
     }
+    err = fwrite_("\n", outfile);
+    ret;
     return err;
 }
 
-Error codegen_program_x86_64_att_asm(ParsingContext *context, Node *program,
-                                     FILE *outfile) {
-    Error err = OK;
-    Node *expression = program->children;
-    fwrite_((char *)";#; ", outfile);
-    fwrite_line((char *)CODEGEN_HEADER, outfile);
-
-    // For all global variables
-    err = codegen_program_x86_64_att_asm_data_section(context, outfile);
-    ret;
-
-    char *lines[6] = {".global _start", ".section .text", "_start: ",
-                      "push %rbp",      "mov %rsp, %rbp", ""};
-
-    for (int i = 0; i < 6; i++) {
-        fwrite_line(lines[i], outfile);
-        ret;
-    }
-
+Error codegen_expression_x86_64_att_mswin(Node *expression, FILE *outfile) {
+    Error err;
+    Node *temp_node = node_allocate();
+    size_t temp_count = 0;
     while (expression) {
         switch (expression->type) {
         default:
+            break;
+        case NODE_TYPE_FUNCTION_CALL:
+            temp_node = expression->children->next_child->children;
+            temp_count = 0;
+            while (temp_node) {
+                switch (temp_count) {
+                case 0:
+                    // RCX
+                    err = fwrite_("mov $", outfile);
+                    ret;
+                    err = fwrite_integer(temp_node->value.MZ_integer, outfile);
+                    ret;
+                    err = fwrite_line(", %rcx", outfile);
+                    ret;
+                    break;
+                case 1:
+                    // RDX
+                    err = fwrite_("mov $", outfile);
+                    ret;
+                    err = fwrite_integer(temp_node->value.MZ_integer, outfile);
+                    ret;
+                    err = fwrite_line(", %rdx", outfile);
+                    ret;
+                    break;
+                case 2:
+                    // R8
+                    err = fwrite_("mov $", outfile);
+                    ret;
+                    err = fwrite_integer(temp_node->value.MZ_integer, outfile);
+                    ret;
+                    err = fwrite_line(", %r8", outfile);
+                    ret;
+                    break;
+                case 3:
+                    // R9
+                    err = fwrite_("mov $", outfile);
+                    ret;
+                    err = fwrite_integer(temp_node->value.MZ_integer, outfile);
+                    ret;
+                    err = fwrite_line(", %r9", outfile);
+                    ret;
+                    break;
+
+                default:
+                    log_message("TODO: Codegen for stack allocated args");
+                    break;
+                }
+                temp_node = temp_node->next_child;
+                temp_count++;
+            }
+            err = fwrite_("call ", outfile);
+            ret;
+            err = fwrite_line(expression->children->value.symbol, outfile);
+            ret;
             break;
         case NODE_TYPE_VARIABLE_REASSIGNMENT:
             // Expression -> next_child -> next_child ....
@@ -108,6 +151,71 @@ Error codegen_program_x86_64_att_asm(ParsingContext *context, Node *program,
         }
         expression = expression->next_child;
     }
+    free(temp_node);
+    return err;
+}
+
+// Calling convention : RCX, RDX, R8, R9
+Error codegen_program_x86_64_att_asm_mswin(ParsingContext *context,
+                                           Node *program, FILE *outfile) {
+    Error err = OK;
+    Node *expression = program->children;
+    fwrite_((char *)";#; ", outfile);
+    fwrite_line((char *)CODEGEN_HEADER, outfile);
+
+    // For all global variables
+    err = codegen_program_x86_64_att_asm_data_section(context, outfile);
+    ret;
+
+    char *lines[9] = {".section .text",
+                      "",
+                      ".global _start",
+                      "GLOBAL_FUNCS",
+                      "_start: ",
+                      "push %rbp",
+                      "mov %rsp, %rbp",
+                      "sub $32, %rsp",
+                      ""};
+    for (int i = 0; i < 9; i++) {
+        if (strcmp("GLOBAL_FUNCS", lines[i]) == 0) {
+
+            fwrite_line("\n;#; -------------------------Global Functions "
+                        "START-------------------------\n",
+                        outfile);
+
+            Binding *func_it = context->functions->binding;
+
+            while (func_it) {
+                Node *func_id = func_it->id;
+                Node *function = func_it->value;
+                func_it = func_it->next;
+
+                fwrite_(func_id->value.symbol, outfile);
+                fwrite_line(":", outfile);
+                fwrite_line("push %rbp", outfile);
+                fwrite_line("mov %rsp, %rbp", outfile);
+                fwrite_line("sub $32, %rsp", outfile);
+
+                codegen_expression_x86_64_att_mswin(
+                    function->children->next_child->next_child->children,
+                    outfile);
+
+                fwrite_line("pop %rbp", outfile);
+                fwrite_line("ret", outfile);
+            }
+
+            fwrite_line("\n;#; -------------------------Global Functions "
+                        "END-------------------------\n",
+                        outfile);
+        } else {
+            fwrite_line(lines[i], outfile);
+            ret;
+        }
+    }
+
+    err = codegen_expression_x86_64_att_mswin(expression, outfile);
+    ret;
+    free(expression);
 
     /*
         TODO: Different exit procedres for linux and windows
@@ -121,10 +229,10 @@ Error codegen_program_x86_64_att_asm(ParsingContext *context, Node *program,
     */
 
     fwrite_line("", outfile);
+    fwrite_line("add $32, %rsp", outfile);
     fwrite_line("pop %rbp", outfile);
-    fwrite_line("movl $0, %ebx", outfile);
-    fwrite_line("movl $1, %eax", outfile);
-    fwrite_line("int $0x80", outfile);
+    fwrite_line("movq $0, %rax", outfile);
+    fwrite_line("ret", outfile);
     ret;
 
     return err;
@@ -148,6 +256,7 @@ Error codegen_program(CODEGEN_OUTPUT_FORMAT format, ParsingContext *context,
     if (!output) {
         ERROR_PREP(err, ERROR_GENERIC,
                    "codegen_program(): Cannot open code file...");
+        // fclose(output);
         return err;
     }
 
@@ -156,10 +265,12 @@ Error codegen_program(CODEGEN_OUTPUT_FORMAT format, ParsingContext *context,
         log_message("CODEGEN_OUTPUT_FORMAT_DEFAULT not supported...");
         break;
     case CODEGEN_OUTPUT_FORMAT_x86_64_AT_T_ASM:
-        return codegen_program_x86_64_att_asm(context, program, output);
+        err = codegen_program_x86_64_att_asm_mswin(context, program, output);
+        // fclose(output);
         break;
     default:
         break;
     }
+
     return err;
 }

@@ -138,6 +138,12 @@ void print_node(Node *node, size_t indent_level) {
     case NODE_TYPE_FUNCTION_RETURN_TYPE:
         printf("[NODE_TYPE_FUNCTION_RETURN_TYPE] : ");
         break;
+    case NODE_TYPE_FUNCTION_CALL:
+        printf("[NODE_TYPE_FUNCTION_CALL] : ");
+        break;
+    case NODE_TYPE_FUNCTION_ARGS_LIST:
+        printf("[NODE_TYPE_FUNCTION_ARGS_LIST] : ");
+        break;
     }
 
     printf(COLOR_RESET);

@@ -9,6 +9,7 @@ b := 42
 
 fn foo(x: integer, y: integer): integer {
     x := 10
+    x := 15
 }
 
-foo(10, 3);
+foo(10, 3)

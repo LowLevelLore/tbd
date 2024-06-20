@@ -16,11 +16,14 @@
 
 typedef struct ParsingContext {
     struct ParsingContext *parent;
+    // For stack continuation while parsng
     Node *operator;
+    Node *result;
+    // ID -> TYPES
     Environment *types;
+    // VARIABLES -> VALUES
     Environment *variables;
     Environment *functions;
-    Node *result;
 } ParsingContext;
 
 ParsingContext *parse_context_create(ParsingContext *);
