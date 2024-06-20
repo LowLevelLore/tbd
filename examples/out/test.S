@@ -11,16 +11,15 @@ a: .space 8
 
 ;#; -------------------------Global Functions START-------------------------
 
+jmp afterfoo
 foo:
 push %rbp
 mov %rsp, %rbp
 sub $32, %rsp
-lea x(%rip), %rax
-movq $10, (%rax)
-lea x(%rip), %rax
-movq $15, (%rax)
+add $32, %rsp
 pop %rbp
 ret
+afterfoo:
 
 ;#; -------------------------Global Functions END-------------------------
 

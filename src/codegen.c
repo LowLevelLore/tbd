@@ -71,13 +71,23 @@ Error codegen_program_x86_64_att_asm_data_section(ParsingContext *context,
     return err;
 }
 
-Error codegen_expression_x86_64_att_mswin(Node *expression, FILE *outfile) {
+Error codegen_function_x86_64_att_mswin(ParsingContext *context, char *name,
+                                        Node *function, FILE *outfile);
+
+Error codegen_expression_x86_64_att_mswin(ParsingContext *context,
+                                          Node *expression, FILE *outfile) {
     Error err;
     Node *temp_node = node_allocate();
     size_t temp_count = 0;
     while (expression) {
         switch (expression->type) {
         default:
+            break;
+        case NODE_TYPE_FUNCTION_DECLARATION:
+            // Generate Names for Lambdas
+            err = codegen_function_x86_64_att_mswin(context, "TODO", expression,
+                                                    outfile);
+            ret;
             break;
         case NODE_TYPE_FUNCTION_CALL:
             temp_node = expression->children->next_child->children;
@@ -134,24 +144,67 @@ Error codegen_expression_x86_64_att_mswin(Node *expression, FILE *outfile) {
             ret;
             break;
         case NODE_TYPE_VARIABLE_REASSIGNMENT:
-            // Expression -> next_child -> next_child ....
-            //       --> [SYM]
-            //       --> [VALUE]
-            err = fwrite_("lea ", outfile);
-            err = fwrite_(expression->children->value.symbol, outfile);
-            err = fwrite_line("(%rip), %rax", outfile);
-            // Assumes to move 8 bytes by default
-            err = fwrite_("movq $", outfile);
-            // Assumes Integer :(
-            err = fwrite_integer(
-                expression->children->next_child->value.MZ_integer, outfile);
-            err = fwrite_line(", (%rax)", outfile);
-            ret;
+            if (!context->parent) {
+                err = fwrite_("lea ", outfile);
+                err = fwrite_(expression->children->value.symbol, outfile);
+                err = fwrite_line("(%rip), %rax", outfile);
+                // Assumes to move 8 bytes by default
+                err = fwrite_("movq $", outfile);
+                // Assumes Integer :(
+                err = fwrite_integer(
+                    expression->children->next_child->value.MZ_integer,
+                    outfile);
+                err = fwrite_line(", (%rax)", outfile);
+                ret;
+            } else {
+            }
             break;
         }
         expression = expression->next_child;
     }
     free(temp_node);
+    return err;
+}
+
+Error codegen_function_x86_64_att_mswin(ParsingContext *context, char *name,
+                                        Node *function, FILE *outfile) {
+    Error err = OK;
+    Node *param_list = function->children;
+    err = fwrite_("jmp after", outfile);
+    ret;
+    err = fwrite_line(name, outfile);
+    ret;
+    err = fwrite_(name, outfile);
+    ret;
+    err = fwrite_line(":", outfile);
+    ret;
+    err = fwrite_line("push %rbp", outfile);
+    ret;
+    err = fwrite_line("mov %rsp, %rbp", outfile);
+    ret;
+    err = fwrite_line("sub $32, %rsp", outfile);
+    ret;
+
+    ParsingContext *nc = parse_context_create(context);
+    context = nc;
+    err = codegen_expression_x86_64_att_mswin(
+        context, function->children->next_child->next_child->children, outfile);
+    ret;
+    context = context->parent;
+    free(nc);
+
+    err = fwrite_line("add $32, %rsp", outfile);
+    ret;
+    err = fwrite_line("pop %rbp", outfile);
+    ret;
+    err = fwrite_line("ret", outfile);
+    ret;
+    err = fwrite_("after", outfile);
+    ret;
+    err = fwrite_(name, outfile);
+    ret;
+    err = fwrite_line(":", outfile);
+    ret;
     return err;
 }
 
@@ -190,18 +243,10 @@ Error codegen_program_x86_64_att_asm_mswin(ParsingContext *context,
                 Node *function = func_it->value;
                 func_it = func_it->next;
 
-                fwrite_(func_id->value.symbol, outfile);
-                fwrite_line(":", outfile);
-                fwrite_line("push %rbp", outfile);
-                fwrite_line("mov %rsp, %rbp", outfile);
-                fwrite_line("sub $32, %rsp", outfile);
-
-                codegen_expression_x86_64_att_mswin(
-                    function->children->next_child->next_child->children,
-                    outfile);
-
-                fwrite_line("pop %rbp", outfile);
-                fwrite_line("ret", outfile);
+                char *name = func_id->value.symbol;
+                err = codegen_function_x86_64_att_mswin(context, name, function,
+                                                        outfile);
+                ret;
             }
 
             fwrite_line("\n;#; -------------------------Global Functions "
@@ -213,7 +258,7 @@ Error codegen_program_x86_64_att_asm_mswin(ParsingContext *context,
         }
     }
 
-    err = codegen_expression_x86_64_att_mswin(expression, outfile);
+    err = codegen_expression_x86_64_att_mswin(context, expression, outfile);
     ret;
     free(expression);
 
