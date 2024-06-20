@@ -43,6 +43,38 @@ void print_usage(char **argv) {
            COLOR_RESET);
 }
 
+Error parse_program(char *filepath, ParsingContext *context, Node *result) {
+    Error err = OK;
+    char *contents = file_contents(filepath);
+    if (!contents) {
+        printf("Filepath: \"%s\"\n", filepath);
+        ERROR_PREP(err, ERROR_GENERIC,
+                   "parse_program(): Couldn't get file contents");
+        return err;
+    }
+    result->type = NODE_TYPE_PROGRAM;
+    char *contents_it = contents;
+    for (;;) {
+        Node *expression = node_allocate();
+        node_add_child(result, expression);
+        err = parse_expr(context, contents_it, &contents_it, expression);
+        if (err.type != ERROR_NULL) {
+            free(contents);
+            return err;
+        }
+        // Check for end-of-parsing case (source and end are the same).
+        if (!(*contents_it)) {
+            break;
+        }
+
+        // printf("Parsed expression:\n");
+        // print_node(expression,0);
+        // putchar('\n');
+    }
+    free(contents);
+    return OK;
+}
+
 int main(int argc, char *argv[]) {
     if (argc < 2) {
         print_usage(argv);
@@ -51,38 +83,9 @@ int main(int argc, char *argv[]) {
         char *filename = argv[1];
         char *contents = file_contents(filename);
         if (contents) {
-            ParsingContext *context = parse_context_create();
-
-            Node *integer_hopefully = node_allocate();
-            bool success = environment_get_by_symbol(context->types, "integer",
-                                                     integer_hopefully);
-            if (!success) {
-                printf("%sCannot get Node within the environment. %s\n", BRED,
-                       COLOR_RESET);
-            }
-            free(integer_hopefully);
-
             Node *program = node_allocate();
-            program->type = NODE_TYPE_PROGRAM;
-            Node *expression = node_allocate();
-            memset(expression, 0, sizeof(Node));
-            char *contents_it = contents;
-            Error err;
-            for (;;) {
-                err =
-                    parse_expr(context, contents_it, &contents_it, expression);
-                if (err.type != ERROR_NULL) {
-                    log_error(&err);
-                    break;
-                }
-                if (!(*contents_it)) {
-                    break;
-                }
-                Node *child = node_allocate();
-                node_copy(expression, child);
-                node_add_child(program, child);
-            }
-            free_nodes(expression);
+            ParsingContext *context = parse_context_default_create();
+            Error err = parse_program(argv[1], context, program);
             print_node(program, 0);
             putchar('\n');
             if (err.type == ERROR_NULL) {
@@ -96,7 +99,6 @@ int main(int argc, char *argv[]) {
                 }
             }
             free_nodes(program);
-            free(contents);
         }
     }
     return 0;

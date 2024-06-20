@@ -53,7 +53,7 @@ Error codegen_program_x86_64_att_asm_data_section(ParsingContext *context,
     while (it) {
         id = it->id;
         type_node = it->value;
-        environment_get(context->types, type_node, size_node);
+        environment_get(*context->types, type_node, size_node);
         err = fwrite_(id->value.symbol, outfile);
         ret;
         err = fwrite_(": .space ", outfile);

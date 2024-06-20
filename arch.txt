@@ -6,6 +6,13 @@ ParsingContext :
             symbol(@name) -> symbol(@type)
 
 
+Function Declaration Node : 
+        -> Function Name
+        -> Arg List
+        -> Return type
+        -> Program/Expression with its own context
+
+
 
 For Linux:
         1st argument : rdi

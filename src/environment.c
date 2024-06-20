@@ -32,8 +32,8 @@ int environment_set(Environment *env, Node *id, Node *value) {
     return 1;
 }
 
-bool environment_get(Environment *env, Node *id, Node *result) {
-    Binding *binding_it = env->binding;
+bool environment_get(Environment env, Node *id, Node *result) {
+    Binding *binding_it = env.binding;
     while (binding_it) {
         if (node_compare(binding_it->id, id)) {
             *result = *binding_it->value;
@@ -44,7 +44,7 @@ bool environment_get(Environment *env, Node *id, Node *result) {
     return false;
 }
 
-bool environment_get_by_symbol(Environment *env, char *symbol, Node *result) {
+bool environment_get_by_symbol(Environment env, char *symbol, Node *result) {
     Node *sym_node = node_symbol(symbol);
     bool status = environment_get(env, sym_node, result);
     free(sym_node);
@@ -126,7 +126,20 @@ void print_node(Node *node, size_t indent_level) {
     case NODE_TYPE_PROGRAM:
         printf("[PROGRAM] : ");
         break;
+    case NODE_TYPE_FUNCTION_DECLARATION:
+        printf("[NODE_TYPE_FUNCTION_DECLARATION] : ");
+        break;
+    case NODE_TYPE_FUNCTION_PARAM:
+        printf("[NODE_TYPE_FUNCTION_PARAM] : ");
+        break;
+    case NODE_TYPE_FUNCTION_PARAMS_LIST:
+        printf("[NODE_TYPE_FUNCTION_PARAMS_LIST] : ");
+        break;
+    case NODE_TYPE_FUNCTION_RETURN_TYPE:
+        printf("[NODE_TYPE_FUNCTION_RETURN_TYPE] : ");
+        break;
     }
+
     printf(COLOR_RESET);
     putchar('\n');
     Node *child = node->children;

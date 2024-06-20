@@ -16,10 +16,13 @@ typedef struct Error {
     char *message;
 } Error;
 
-#define ERROR_PREP(err, etype, msg)                                            \
+char buffer[1024];
+
+#define ERROR_PREP(err, etype, msg, ...)                                       \
     {                                                                          \
         err.type = etype;                                                      \
-        err.message = msg;                                                     \
+        sprintf(buffer, msg, ##__VA_ARGS__);                                   \
+        err.message = buffer;                                                  \
     }
 
 Error OK = {ERROR_NULL, NULL};

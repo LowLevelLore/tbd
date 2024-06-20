@@ -17,12 +17,26 @@ typedef enum NodeType {
     NODE_TYPE_PROGRAM,
     NODE_TYPE_SYMBOL,
     NODE_TYPE_BINARY_OPERATOR,
+
     NODE_TYPE_VARIABLE_DECLARATION,
     NODE_TYPE_VARIABLE_REASSIGNMENT,
     NODE_TYPE_VARIABLE_DECLARATION_WITH_INITIALIZATION,
     NODE_TYPE_INTEGER,
     NODE_TYPE_FLOAT,
     NODE_TYPE_STRING,
+
+    /*
+        NODE_TYPE_FUNCTION_DECLARATION
+            1. PARAM_LIST
+                a. PARAM 1
+                b. PARAM 2
+            2. RETURN_TYPE
+            3. EXPRESSION/PROGRRAM
+    */
+    NODE_TYPE_FUNCTION_DECLARATION,
+    NODE_TYPE_FUNCTION_PARAMS_LIST,
+    NODE_TYPE_FUNCTION_PARAM,
+    NODE_TYPE_FUNCTION_RETURN_TYPE,
 } NodeType;
 
 typedef union NodeValue {
@@ -52,9 +66,9 @@ typedef struct Environment {
 void free_nodes(Node *);
 
 Environment *environment_create(Environment *);
-int environment_set(Environment *, Node *, Node *);
-bool environment_get(Environment *, Node *, Node *);
-bool environment_get_by_symbol(Environment *, char *, Node *);
+int environment_set(Environment*, Node *, Node *);
+bool environment_get(Environment, Node *, Node *);
+bool environment_get_by_symbol(Environment , char *, Node *);
 Node *node_allocate();
 void node_add_child(Node *, Node *);
 void free_nodes(Node *);

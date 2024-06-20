@@ -1,5 +1,4 @@
 a : integer = 69
-
 a := 420
 
 b : integer
@@ -7,3 +6,9 @@ b := 42
 
 # Uncomment below to create a parsing error
 # b : integer
+
+fn foo(x: integer, y: integer): integer {
+    x := 10
+}
+
+foo(10, 3);
