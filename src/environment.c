@@ -112,7 +112,7 @@ void print_node(Node *node, size_t indent_level) {
         }
         break;
     case NODE_TYPE_BINARY_OPERATOR:
-        printf("[BINARY OPERATOR]");
+        printf("[BINARY OPERATOR %s]", node->value.symbol);
         break;
     case NODE_TYPE_VARIABLE_DECLARATION:
         printf("[VARIABLE DECLARATION]");
@@ -155,8 +155,8 @@ void print_node(Node *node, size_t indent_level) {
     }
 }
 
-Error node_add_type(Environment *types, int type, Node *type_symbol,
-                    long long byte_size) {
+Error define_type(Environment *types, int type, Node *type_symbol,
+                  long long byte_size) {
     assert(types && "Can not add type to NULL types environment");
     assert(type_symbol && "Can not add NULL type symbol to types environment");
     assert(byte_size >= 0 &&
@@ -170,7 +170,7 @@ Error node_add_type(Environment *types, int type, Node *type_symbol,
     type_node->type = type;
     type_node->children = size_node;
 
-    if (environment_set(types, type_symbol, size_node) == 1) {
+    if (environment_set(types, type_symbol, type_node) == 1) {
         return OK;
     }
     // TYPE REDEFINITION ERROR

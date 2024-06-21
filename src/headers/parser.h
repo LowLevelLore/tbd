@@ -24,6 +24,7 @@ typedef struct ParsingContext {
     // VARIABLES -> VALUES
     Environment *variables;
     Environment *functions;
+    Environment *binary_operators;
 } ParsingContext;
 
 ParsingContext *parse_context_create(ParsingContext *);

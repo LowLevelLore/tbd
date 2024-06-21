@@ -8,6 +8,7 @@
 
 #include "codegen/main.c"
 #include "parser.c"
+#include "typechecker.c"
 
 int file_size(FILE *file) {
     fseek(file, 0, SEEK_END);
@@ -42,8 +43,8 @@ char *file_contents(char *filepath) {
 }
 
 void print_usage(char **argv) {
-    printf("%sUSAGE: %s <path_to_file_to_compile>%s\n", RED, argv[0],
-           COLOR_RESET);
+    printf("%sUSAGE: %s <path_to_file_to_compile> <output_file>%s\n", RED,
+           argv[0], COLOR_RESET);
 }
 
 Error parse_program(char *filepath, ParsingContext *context, Node *result) {
@@ -79,7 +80,7 @@ Error parse_program(char *filepath, ParsingContext *context, Node *result) {
 }
 
 int main(int argc, char *argv[]) {
-    if (argc < 2) {
+    if (argc < 3) {
         print_usage(argv);
         exit(0);
     } else {
@@ -89,19 +90,26 @@ int main(int argc, char *argv[]) {
             Node *program = node_allocate();
             ParsingContext *context = parse_context_default_create();
             Error err = parse_program(argv[1], context, program);
-            print_node(program, 0);
+            // print_node(program, 0);
             putchar('\n');
-            if (err.type == ERROR_NULL) {
-                log_message("GENERATING CODE \n");
-                err = codegen_program(context, program,
-                                      MZ_CODEGEN_OUTPUT_FORMAT_x86_64_ASM_MSWIN,
-                                      "examples/out/test.s");
-                if (err.type != ERROR_NULL)
-                    log_error(&err);
-                else {
-                    printf("\n");
-                    log_message("COMPLETED GENERATION");
-                }
+            if (err.type != ERROR_NULL) {
+                log_error(&err);
+                exit(1);
+            }
+            err = typecheck_program(context, program);
+            if (err.type != ERROR_NULL) {
+                log_error(&err);
+                exit(1);
+            }
+            log_message("GENERATING CODE \n");
+            err = codegen_program(context, program,
+                                  MZ_CODEGEN_OUTPUT_FORMAT_x86_64_ASM_MSWIN,
+                                  argv[2]);
+            if (err.type != ERROR_NULL)
+                log_error(&err);
+            else {
+                printf("\n");
+                log_message("COMPLETED GENERATION");
             }
             free_nodes(program);
         }

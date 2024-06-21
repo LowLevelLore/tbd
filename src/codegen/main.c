@@ -63,8 +63,6 @@ CodegenContext *codegen_context_create(CodegenContext *parent) {
     return cg_ctx;
 }
 
-//======================MZ_CODEGEN_UTILS ENDS========================
-
 char *label_generate() {
     char *label = CG_LABEL_BUFFER + label_index;
     label_index += snprintf(label, CG_LABEL_BUFFER_LENGTH - label_index,
@@ -77,6 +75,34 @@ char *label_generate() {
     label_count++;
     return label;
 }
+
+void define_binary_operator(ParsingContext *context, char *operator,
+                            int precedence, char *return_type, char *lhs_type,
+                            char *rhs_type) {
+    Node *bin_op = node_allocate();
+    bin_op->type = NODE_TYPE_BINARY_OPERATOR;
+    node_add_child(bin_op, node_integer(precedence));
+    node_add_child(bin_op, node_symbol(return_type));
+    node_add_child(bin_op, node_symbol(lhs_type));
+    node_add_child(bin_op, node_symbol(rhs_type));
+
+    while (context->parent) {
+        context = context->parent;
+    }
+
+    int status = environment_set(context->binary_operators,
+                                 node_symbol(operator), bin_op);
+    if (status == 0) {
+        Error err;
+        ERROR_PREP(
+            err, ERROR_GENERIC,
+            "Cannot set binary operator '%s' in the environment.", operator);
+        log_error(&err);
+        exit(0);
+    }
+    return;
+}
+//======================MZ_CODEGEN_UTILS ENDS========================
 
 //======================MZ_CODEGEN_COMMON BEGINS=====================
 
@@ -132,10 +158,14 @@ Error codegen_expression_x86_64_mswin(ParsingContext *context,
         break;
     case NODE_TYPE_VARIABLE_DECLARATION:
         if (!cg_context->parent) {
-            LINE("lea %s, %%rax", symbol_to_addr(expression->children));
             if (expression->children->next_child->type == NODE_TYPE_NULL) {
+                LINE("lea %s, %%rax", symbol_to_addr(expression->children));
                 LINE("movq $0, (%%rax)");
+            } else if (expression->children->next_child->type ==
+                       NODE_TYPE_BINARY_OPERATOR) {
+
             } else {
+                LINE("lea %s, %%rax", symbol_to_addr(expression->children));
                 BYTES("movq $");
                 write_integer(
                     expression->children->next_child->value.MZ_integer,
