@@ -1,10 +1,13 @@
-#include "codegen.c"
+#define DEBUG_COMPILER
+#include "headers/codegen/main.h"
 #include "headers/environment.h"
 #include "headers/parser.h"
-#include "parser.c"
 #include "utils/colors.h"
 #include "utils/errors.h"
 #include "utils/logging.h"
+
+#include "codegen/main.c"
+#include "parser.c"
 
 int file_size(FILE *file) {
     fseek(file, 0, SEEK_END);
@@ -89,13 +92,15 @@ int main(int argc, char *argv[]) {
             print_node(program, 0);
             putchar('\n');
             if (err.type == ERROR_NULL) {
-                log_message("GENERATING CODE \n\n");
-                err = codegen_program(CODEGEN_OUTPUT_FORMAT_x86_64_AT_T_ASM,
-                                      context, program, "examples/out/test.S");
+                log_message("GENERATING CODE \n");
+                err = codegen_program(context, program,
+                                      MZ_CODEGEN_OUTPUT_FORMAT_x86_64_ASM_MSWIN,
+                                      "examples/out/test.s");
                 if (err.type != ERROR_NULL)
                     log_error(&err);
                 else {
-                    log_message("COMPLETED GENERATION\n\n");
+                    printf("\n");
+                    log_message("COMPLETED GENERATION");
                 }
             }
             free_nodes(program);

@@ -8,7 +8,7 @@
 #include <string.h>
 
 #include "../utils/errors.h"
-#include "codegen.h"
+#include "codegen/main.h"
 #include "environment.h"
 #include "lexer.h"
 

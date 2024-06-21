@@ -16,7 +16,7 @@ typedef struct Error {
     char *message;
 } Error;
 
-char buffer[1024];
+char buffer[4096];
 
 #define ERROR_PREP(err, etype, msg, ...)                                       \
     {                                                                          \

@@ -117,9 +117,6 @@ void print_node(Node *node, size_t indent_level) {
     case NODE_TYPE_VARIABLE_DECLARATION:
         printf("[VARIABLE DECLARATION]");
         break;
-    case NODE_TYPE_VARIABLE_DECLARATION_WITH_INITIALIZATION:
-        printf("[VARIABLE DECLARATION INITIALIZED]");
-        break;
     case NODE_TYPE_VARIABLE_REASSIGNMENT:
         printf("[VARIABLE REASSIGNMENT]");
         break;
@@ -143,6 +140,9 @@ void print_node(Node *node, size_t indent_level) {
         break;
     case NODE_TYPE_FUNCTION_ARGS_LIST:
         printf("[NODE_TYPE_FUNCTION_ARGS_LIST] : ");
+        break;
+    case NODE_TYPE_DEBUG_PRINT_INTEGER:
+        printf("[NODE_TYPE_DEBUG_PRINT_INTEGER] : ");
         break;
     }
 
@@ -238,9 +238,11 @@ int node_compare(Node *a, Node *b) {
     case NODE_TYPE_VARIABLE_DECLARATION:
         printf("TODO: node_compare() VARIABLE DECLARATION\n");
         break;
-    case NODE_TYPE_VARIABLE_DECLARATION_WITH_INITIALIZATION:
-        printf("TODO: node_compare() VARIABLE DECLARATION INITIALIZED\n");
+
+    case NODE_TYPE_DEBUG_PRINT_INTEGER:
+        printf("TODO: node_compare() VARIABLE DECLARATION\n");
         break;
+
     case NODE_TYPE_PROGRAM:
         printf("TODO: Compare two programs.\n");
         break;

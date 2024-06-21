@@ -107,13 +107,27 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
             Node *symbol =
                 node_symbol_from_buffer(current_token.beginning, token_length);
 
+#ifdef DEBUG_COMPILER
+            if (strcmp(symbol->value.symbol, "pint") == 0) {
+                working_result->type = NODE_TYPE_DEBUG_PRINT_INTEGER;
+                lex_advance(&current_token, &token_length, end);
+                Node *temp_symbol = node_allocate();
+                temp_symbol = node_symbol_from_buffer(current_token.beginning,
+                                                      token_length);
+                print_node(temp_symbol, 0);
+                node_add_child(working_result, temp_symbol);
+                return OK;
+            }
+
+#endif // DEBUG
+
             // TODO: Parse strings and other literal types.
 
             // TODO: Check for unary prefix operators.
 
-            // TODO: Check that it isn't a binary operator (we should encounter
-            // left side first and peek forward, rather than encounter it at top
-            // level).
+            // TODO: Check that it isn't a binary operator (we should
+            // encounter left side first and peek forward, rather than
+            // encounter it at top level).
 
             if (strcmp("fn", symbol->value.symbol) == 0) {
                 // Begin function definition.
@@ -146,18 +160,18 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
                 parameter_list->type = NODE_TYPE_FUNCTION_PARAMS_LIST;
                 node_add_child(working_result, parameter_list);
 
-                // FIXME?: Should we possibly create a parser stack and evaluate
-                // the next expression, then ensure return value is var. decl.
-                // in stack handling below?
+                // FIXME?: Should we possibly create a parser stack and
+                // evaluate the next expression, then ensure return value is
+                // var. decl. in stack handling below?
                 for (;;) {
                     EXPECT(expected, ")", current_token, token_length, end);
                     if (expected.found) {
                         break;
                     }
                     if (expected.done) {
-                        ERROR_PREP(
-                            err, ERROR_SYNTAX,
-                            "Expected closing parenthesis for parameter list");
+                        ERROR_PREP(err, ERROR_SYNTAX,
+                                   "Expected closing parenthesis for "
+                                   "parameter list");
                         return err;
                     }
 
@@ -170,9 +184,9 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
 
                     EXPECT(expected, ":", current_token, token_length, end);
                     if (expected.done || !expected.found) {
-                        ERROR_PREP(
-                            err, ERROR_SYNTAX,
-                            "Parameter declaration requires a type annotation");
+                        ERROR_PREP(err, ERROR_SYNTAX,
+                                   "Parameter declaration requires a type "
+                                   "annotation");
                         return err;
                     }
 
@@ -248,12 +262,12 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
                 working_result = function_first_expression;
                 context->result = working_result;
                 continue;
-
             } else {
 
-                // TODO: Check if valid symbol for variable environment, then
-                // attempt to pattern match variable access, assignment,
-                // declaration, or declaration with initialization.
+                // TODO: Check if valid symbol for variable environment,
+                // then attempt to pattern match variable access,
+                // assignment, declaration, or declaration with
+                // initialization.
 
                 EXPECT(expected, ":", current_token, token_length, end);
                 if (expected.found) {

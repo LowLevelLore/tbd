@@ -14,13 +14,22 @@
 #include <stdbool.h>
 typedef enum NodeType {
     NODE_TYPE_NULL,
+    // A program contains expressions as its children
     NODE_TYPE_PROGRAM,
+    // Hold a symbol
     NODE_TYPE_SYMBOL,
+
     NODE_TYPE_BINARY_OPERATOR,
+
+
+    // To debug print an integer
+    // Syntax: pint var_name
+    // NODE_TYPE_DEBUG_PRINT_INTEGER
+    //      --> NODE_TYPE_SYMBOL
+    NODE_TYPE_DEBUG_PRINT_INTEGER,
 
     NODE_TYPE_VARIABLE_DECLARATION,
     NODE_TYPE_VARIABLE_REASSIGNMENT,
-    NODE_TYPE_VARIABLE_DECLARATION_WITH_INITIALIZATION,
     NODE_TYPE_INTEGER,
     NODE_TYPE_FLOAT,
     NODE_TYPE_STRING,
@@ -58,6 +67,7 @@ typedef struct Node {
     NodeValue value;
     struct Node *children;
     struct Node *next_child;
+    int result_register;
 } Node;
 
 typedef struct Binding {
