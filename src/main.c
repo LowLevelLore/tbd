@@ -91,6 +91,7 @@ int main(int argc, char *argv[]) {
             ParsingContext *context = parse_context_default_create();
             Error err = parse_program(argv[1], context, program);
             print_node(program, 0);
+            // parsing_context_print(context, 0);
             putchar('\n');
             if (err.type != ERROR_NULL) {
                 log_error(&err);

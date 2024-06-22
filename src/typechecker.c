@@ -101,7 +101,6 @@ Error typecheck_expression(ParsingContext *context, Node *expression) {
         break;
     case NODE_TYPE_FUNCTION_CALL:
         // TODO: Make sure that the arguments match the parameters...
-        // print_node(expression, 0);
         while (context) {
             if (environment_get(*context->functions, expression->children,
                                 vessel_0)) {
@@ -111,8 +110,11 @@ Error typecheck_expression(ParsingContext *context, Node *expression) {
         }
         int exprected = 0;
         int recieved = 0;
+        print_node(vessel_0, 0);
+        print_node(expression, 0);
         vessel_1 = vessel_0->children->children;
         vessel_0 = expression->children->next_child->children;
+        // log_message("HERE");
         while (vessel_1 && vessel_0) {
             if (vessel_1->type == NODE_TYPE_NULL &&
                 vessel_0->type != NODE_TYPE_NULL) {

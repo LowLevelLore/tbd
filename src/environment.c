@@ -3,6 +3,82 @@
 #include "utils/errors.h"
 #include "utils/logging.h"
 
+void print_node_internal(Node *node, size_t indent_level, char *color,
+                         bool new_line) {
+    if (!node) {
+        return;
+    }
+    if (new_line)
+        printf("\n");
+    for (size_t i = 0; i < indent_level; ++i) {
+        putchar(' ');
+    }
+    printf(color);
+    switch (node->type) {
+    default:
+        printf("[UNKNOWN]");
+        break;
+    case NODE_TYPE_NULL:
+        printf("[NONE]");
+        break;
+    case NODE_TYPE_INTEGER:
+        printf("[INT]: %lld", node->value.MZ_integer);
+        break;
+    case NODE_TYPE_SYMBOL:
+        printf("[SYM]");
+        if (node->value.symbol) {
+            printf(": %s", node->value.symbol);
+        }
+        break;
+    case NODE_TYPE_BINARY_OPERATOR:
+        printf("[BINARY OPERATOR %s]", node->value.symbol);
+        break;
+    case NODE_TYPE_VARIABLE_DECLARATION:
+        printf("[VARIABLE DECLARATION]");
+        break;
+    case NODE_TYPE_VARIABLE_REASSIGNMENT:
+        printf("[VARIABLE REASSIGNMENT]");
+        break;
+    case NODE_TYPE_VARIABLE_ACCESS:
+        printf("[VARIABLE ACCESS] : ");
+        break;
+    case NODE_TYPE_PROGRAM:
+        printf("[PROGRAM] : ");
+        break;
+    case NODE_TYPE_FUNCTION_DECLARATION:
+        printf("[NODE_TYPE_FUNCTION_DECLARATION] : ");
+        break;
+    case NODE_TYPE_FUNCTION_PARAM:
+        printf("[NODE_TYPE_FUNCTION_PARAM] : ");
+        break;
+    case NODE_TYPE_FUNCTION_PARAMS_LIST:
+        printf("[NODE_TYPE_FUNCTION_PARAMS_LIST] : ");
+        break;
+    case NODE_TYPE_FUNCTION_RETURN_TYPE:
+        printf("[NODE_TYPE_FUNCTION_RETURN_TYPE] : ");
+        break;
+    case NODE_TYPE_FUNCTION_CALL:
+        printf("[NODE_TYPE_FUNCTION_CALL] : ");
+        break;
+    case NODE_TYPE_FUNCTION_ARGS_LIST:
+        printf("[NODE_TYPE_FUNCTION_ARGS_LIST] : ");
+        break;
+    // case NODE_TYPE_INITIAL_ARG:
+    //     printf("[INITIAL ARGUMENT] : ");
+    //     break;
+    case NODE_TYPE_DEBUG_PRINT_INTEGER:
+        printf("[NODE_TYPE_DEBUG_PRINT_INTEGER] : ");
+        break;
+    }
+
+    printf(COLOR_RESET);
+    Node *child = node->children;
+    while (child) {
+        print_node(child, indent_level + 4);
+        child = child->next_child;
+    }
+}
+
 Environment *environment_create(Environment *parent) {
     Environment *env = (Environment *)malloc(sizeof(Environment));
     assert(env && "Unable to allocate memory for environment.");
@@ -42,6 +118,17 @@ bool environment_get(Environment env, Node *id, Node *result) {
         binding_it = binding_it->next;
     }
     return false;
+}
+
+void print_environment(Environment *env, size_t indent_level) {
+    Binding *binding_it = env->binding;
+    while (binding_it) {
+        print_node_internal(binding_it->id, indent_level, BYEL, false);
+        printf("\n");
+        print_node_internal(binding_it->value, indent_level, BGRN, false);
+        printf("\n");
+        binding_it = binding_it->next;
+    }
 }
 
 bool environment_get_by_symbol(Environment env, char *symbol, Node *result) {
@@ -88,74 +175,7 @@ void free_nodes(Node *node) {
 }
 
 void print_node(Node *node, size_t indent_level) {
-    if (!node) {
-        return;
-    }
-    for (size_t i = 0; i < indent_level; ++i) {
-        putchar(' ');
-    }
-    printf(BCYN);
-    switch (node->type) {
-    default:
-        printf("[UNKNOWN]");
-        break;
-    case NODE_TYPE_NULL:
-        printf("[NONE]");
-        break;
-    case NODE_TYPE_INTEGER:
-        printf("[INT]: %lld", node->value.MZ_integer);
-        break;
-    case NODE_TYPE_SYMBOL:
-        printf("[SYM]");
-        if (node->value.symbol) {
-            printf(": %s", node->value.symbol);
-        }
-        break;
-    case NODE_TYPE_BINARY_OPERATOR:
-        printf("[BINARY OPERATOR %s]", node->value.symbol);
-        break;
-    case NODE_TYPE_VARIABLE_DECLARATION:
-        printf("[VARIABLE DECLARATION]");
-        break;
-    case NODE_TYPE_VARIABLE_REASSIGNMENT:
-        printf("[VARIABLE REASSIGNMENT]");
-        break;
-    case NODE_TYPE_PROGRAM:
-        printf("[PROGRAM] : ");
-        break;
-    case NODE_TYPE_FUNCTION_DECLARATION:
-        printf("[NODE_TYPE_FUNCTION_DECLARATION] : ");
-        break;
-    case NODE_TYPE_FUNCTION_PARAM:
-        printf("[NODE_TYPE_FUNCTION_PARAM] : ");
-        break;
-    case NODE_TYPE_FUNCTION_PARAMS_LIST:
-        printf("[NODE_TYPE_FUNCTION_PARAMS_LIST] : ");
-        break;
-    case NODE_TYPE_FUNCTION_RETURN_TYPE:
-        printf("[NODE_TYPE_FUNCTION_RETURN_TYPE] : ");
-        break;
-    case NODE_TYPE_FUNCTION_CALL:
-        printf("[NODE_TYPE_FUNCTION_CALL] : ");
-        break;
-    case NODE_TYPE_FUNCTION_ARGS_LIST:
-        printf("[NODE_TYPE_FUNCTION_ARGS_LIST] : ");
-        break;
-    // case NODE_TYPE_INITIAL_ARG:
-    //     printf("[INITIAL ARGUMENT] : ");
-    //     break;
-    case NODE_TYPE_DEBUG_PRINT_INTEGER:
-        printf("[NODE_TYPE_DEBUG_PRINT_INTEGER] : ");
-        break;
-    }
-
-    printf(COLOR_RESET);
-    putchar('\n');
-    Node *child = node->children;
-    while (child) {
-        print_node(child, indent_level + 4);
-        child = child->next_child;
-    }
+    print_node_internal(node, indent_level, BCYN, true);
 }
 
 Error define_type(Environment *types, int type, Node *type_symbol,

@@ -16,6 +16,8 @@
 
 typedef struct ParsingContext {
     struct ParsingContext *parent;
+    struct ParsingContext *children;
+    struct ParsingContext *next_child;
     // For stack continuation while parsng
     Node *operator;
     Node *result;

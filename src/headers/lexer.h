@@ -13,7 +13,7 @@
 const char *NEWLINE = "\r\n";
 const char *COMMENT_DEIMETER = "#";
 const char *WHITESPACE = " \r\n";
-const char *DELIMETER = " \r\n,():=+*/{}";
+const char *DELIMETER = " \r\n,():=+*/{}[]";
 
 typedef struct Token {
     char *beginning;

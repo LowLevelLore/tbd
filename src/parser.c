@@ -5,11 +5,69 @@
 #include "lexer.c"
 #include "utils/errors.h"
 
+void parsing_context_print(ParsingContext *top, size_t indent_level) {
+    // TODO: Print current context
+    if (!top)
+        return;
+    printf("\n");
+    int temp = indent_level;
+    while (temp--) {
+        putchar(' ');
+    }
+    temp = indent_level;
+
+    if (top->parent == NULL) {
+        printf("%s[BINARY_OPERATORS]:\n%s", BBLU, COLOR_RESET);
+        print_environment(top->binary_operators, indent_level + 2);
+        while (temp--) {
+            putchar(' ');
+        }
+    }
+
+    printf("%s[TYPES]:\n%s", BBLU, COLOR_RESET);
+    temp = indent_level;
+    print_environment(top->types, indent_level + 2);
+    while (temp--) {
+        putchar(' ');
+    }
+    printf("%s[VARIABLES]:\n%s", BBLU, COLOR_RESET);
+    temp = indent_level;
+    print_environment(top->variables, indent_level + 2);
+    while (temp--) {
+        putchar(' ');
+    }
+    printf("%s[FUNCTIONS]:\n%s", BBLU, COLOR_RESET);
+    temp = indent_level;
+    print_environment(top->functions, indent_level + 2);
+    ParsingContext *itr = top->children;
+    while (itr) {
+        parsing_context_print(itr, indent_level + 4);
+        itr = itr->next_child;
+    }
+}
+
+void parsing_context_add_child(ParsingContext *parent, ParsingContext *child) {
+    if (!parent) {
+        return;
+    }
+    if (parent->children) {
+        parent = parent->children;
+        while (parent->next_child) {
+            parent = parent->next_child;
+        }
+        parent->next_child = child;
+    } else {
+        parent->children = child;
+    }
+}
+
 ParsingContext *parse_context_default_create() {
     ParsingContext *ctx = parse_context_create(NULL);
     assert(ctx && "Could not allocate memory for parsing context.");
     Error err = define_type(ctx->types, NODE_TYPE_INTEGER,
                             node_symbol("integer"), sizeof(long long));
+    err = define_type(ctx->types, NODE_TYPE_FUNCTION_DECLARATION,
+                      node_symbol("fn"), sizeof(long long));
     define_binary_operator(ctx, "+", 5, "integer", "integer", "integer");
     define_binary_operator(ctx, "-", 5, "integer", "integer", "integer");
     define_binary_operator(ctx, "*", 10, "integer", "integer", "integer");
@@ -24,6 +82,7 @@ ParsingContext *parse_context_default_create() {
 ParsingContext *parse_context_create(ParsingContext *parent) {
     ParsingContext *ctx = calloc(1, sizeof(ParsingContext));
     assert(ctx && "Could not allocate memory for parsing context.");
+    parsing_context_add_child(parent, ctx);
     ctx->parent = parent;
     ctx->operator= NULL;
     ctx->result = NULL;
@@ -31,6 +90,8 @@ ParsingContext *parse_context_create(ParsingContext *parent) {
     ctx->variables = environment_create(NULL);
     ctx->functions = environment_create(NULL);
     ctx->binary_operators = environment_create(NULL);
+    ctx->children = NULL;
+    ctx->next_child = NULL;
     return ctx;
 }
 
@@ -122,6 +183,123 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
             }
 
 #endif // DEBUG
+
+            if (strcmp("[", symbol->value.symbol) == 0) {
+                // Return Type
+                // Param List
+                working_result->type = NODE_TYPE_FUNCTION_DECLARATION;
+                lex_advance(&current_token, &token_length, end);
+                Node *function_return_type = node_symbol_from_buffer(
+                    current_token.beginning, token_length);
+                Node *function_return = node_allocate();
+                function_return->type = NODE_TYPE_FUNCTION_RETURN_TYPE;
+                node_add_child(function_return, function_return_type);
+
+                EXPECT(expected, "(", current_token, token_length, end);
+                if (!expected.found || expected.done) {
+                    ERROR_PREP(err, ERROR_SYNTAX,
+                               "Expected opening parenthesis for parameter "
+                               "list after function name");
+                    return err;
+                }
+
+                Node *parameter_list = node_allocate();
+                parameter_list->type = NODE_TYPE_FUNCTION_PARAMS_LIST;
+                node_add_child(working_result, parameter_list);
+                node_add_child(working_result, function_return);
+                // FIXME?: Should we possibly create a parser stack and
+                // evaluate the next expression, then ensure return value is
+                // var. decl. in stack handling below?
+
+                // Node *narg = node_allocate();
+                // narg->type = NODE_TYPE_INITIAL_ARG;
+                // node_add_child(parameter_list, narg);
+
+                for (;;) {
+                    EXPECT(expected, ")", current_token, token_length, end);
+                    if (expected.found) {
+                        break;
+                    }
+                    if (expected.done) {
+                        ERROR_PREP(err, ERROR_SYNTAX,
+                                   "Expected closing parenthesis for "
+                                   "parameter list");
+                        return err;
+                    }
+
+                    err = lex_advance(&current_token, &token_length, end);
+                    if (err.type) {
+                        return err;
+                    }
+                    Node *parameter_name = node_symbol_from_buffer(
+                        current_token.beginning, token_length);
+
+                    EXPECT(expected, ":", current_token, token_length, end);
+                    if (expected.done || !expected.found) {
+                        ERROR_PREP(err, ERROR_SYNTAX,
+                                   "Parameter declaration requires a type "
+                                   "annotation");
+                        return err;
+                    }
+
+                    lex_advance(&current_token, &token_length, end);
+                    Node *parameter_type = node_symbol_from_buffer(
+                        current_token.beginning, token_length);
+
+                    Node *parameter = node_allocate();
+                    parameter->type = NODE_TYPE_FUNCTION_PARAM;
+                    node_add_child(parameter, parameter_name);
+                    node_add_child(parameter, parameter_type);
+
+                    node_add_child(parameter_list, parameter);
+
+                    EXPECT(expected, ",", current_token, token_length, end);
+                    if (expected.found) {
+                        continue;
+                    }
+
+                    EXPECT(expected, ")", current_token, token_length, end);
+                    if (!expected.found) {
+                        ERROR_PREP(err, ERROR_SYNTAX,
+                                   "Expected closing parenthesis following "
+                                   "parameter list");
+                        return err;
+                    }
+                    break;
+                }
+
+                if (!parameter_list->children) {
+                    Node *none_param = node_allocate();
+                    node_add_child(parameter_list, none_param);
+                }
+                // Body
+                EXPECT(expected, "{", current_token, token_length, end);
+                if (expected.done || !expected.found) {
+                    ERROR_PREP(err, ERROR_SYNTAX,
+                               "Function definition requires body following "
+                               "return type: \"{ a + b }\"");
+                    return err;
+                }
+                context = parse_context_create(context);
+                context->operator= node_symbol("lambda");
+
+                Node *param_it = working_result->children->children;
+                if (param_it && param_it->children) {
+                    environment_set(context->variables, param_it->children,
+                                    param_it->children->next_child);
+                }
+
+                Node *function_body = node_allocate();
+                function_body->type = NODE_TYPE_PROGRAM;
+                Node *function_first_expression = node_allocate();
+                node_add_child(function_body, function_first_expression);
+
+                node_add_child(working_result, function_body);
+
+                working_result = function_first_expression;
+                context->result = working_result;
+                continue;
+            }
 
             // TODO: Parse strings and other literal types.
 
@@ -322,6 +500,7 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
                 Node *type_symbol = node_symbol_from_buffer(
                     current_token.beginning, token_length);
                 Node *type_value = node_allocate();
+                print_node(type_value, 0);
                 parse_get_type(context, type_symbol, type_value);
                 if (type_value->type == NODE_TYPE_NULL) {
                     ERROR_PREP(err, ERROR_TYPE,
@@ -391,6 +570,31 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
                     context->result = working_result;
                     continue;
                 } else {
+                    ParsingContext *copy = context;
+                    bool found = false;
+                    Node *variable = node_allocate();
+                    while (copy->parent) {
+                        if (environment_get(*copy->variables, symbol,
+                                            variable)) {
+                            found = true;
+                            break;
+                        }
+                        copy = copy->parent;
+                    }
+
+                    if (environment_get(*copy->variables, symbol, variable)) {
+                        found = true;
+                    }
+
+                    if (!found) {
+                        ERROR_PREP(err, ERROR_SYNTAX, "Unknown token: %s",
+                                   symbol->value.symbol);
+                        ret;
+                    }
+
+                    working_result->type = NODE_TYPE_VARIABLE_ACCESS;
+                    node_add_child(working_result, symbol);
+
                     // TODO: Check for variable access.
                 }
             }
@@ -465,12 +669,41 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
                        "internal error :(");
             return err;
         }
+        if (strcmp(operator->value.symbol, "lambda") == 0) {
+            // Evaluate next expression unless it's a closing brace.
+            EXPECT(expected, "}", current_token, token_length, end);
+            if (expected.done || expected.found) {
+                EXPECT(expected, "]", current_token, token_length, end);
+                if (expected.done || expected.found) {
+                    if (!context->parent)
+                        return OK;
+                    context = context->parent;
+                    if (!context->parent) {
+                        context->result = result;
+                    }
+                } else {
+                    ERROR_PREP(err, ERROR_SYNTAX,
+                               "Expected ']' after lambda definition.");
+                    ret;
+                }
+            }
+
+            context->result->next_child = node_allocate();
+            working_result = context->result->next_child;
+            context->result = working_result;
+            continue;
+        }
 
         if (strcmp(operator->value.symbol, "fn") == 0) {
             // Evaluate next expression unless it's a closing brace.
             EXPECT(expected, "}", current_token, token_length, end);
             if (expected.done || expected.found) {
-                break;
+                if (!context->parent)
+                    break;
+                context = context->parent;
+                if (!context->parent) {
+                    context->result = result;
+                }
             }
 
             context->result->next_child = node_allocate();

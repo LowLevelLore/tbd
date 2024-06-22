@@ -14,6 +14,9 @@ pint b
 
 fn foo(x: integer, y: integer): integer {
     x := 10
+#    fn bar(a: integer): integer{
+#        k : integer = 69
+#    }
     x := 15
 }
 

@@ -1,5 +1,10 @@
 fn foo(): integer {
+    bar : fn = [ integer (y: integer) {
+        x : fn = [ integer () {
+            k: integer = 10
+        }]
+        y
+    }]
     x : integer = 10
+    2 + 3 * 12
 }
-
-10 + foo() + 3 * 2 - 2
