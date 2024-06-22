@@ -58,11 +58,11 @@ void register_deallocate(Register *base, RegisterDescriptor rd) {
 
 char *register_name(Register *base, RegisterDescriptor register_descriptor) {
     while (base) {
-        register_descriptor--;
         if (register_descriptor <= 0) {
             return base->name;
         }
+        register_descriptor--;
         base = base->next;
     }
-    return NULL;
+    return "This should'nt happen !!!! <SCREAM> :( WE ARE DOOMED";
 }

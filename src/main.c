@@ -90,7 +90,7 @@ int main(int argc, char *argv[]) {
             Node *program = node_allocate();
             ParsingContext *context = parse_context_default_create();
             Error err = parse_program(argv[1], context, program);
-            // print_node(program, 0);
+            print_node(program, 0);
             putchar('\n');
             if (err.type != ERROR_NULL) {
                 log_error(&err);

@@ -1,2 +1,5 @@
-2 * 3 + 1
-b:integer = 3
+fn foo(): integer {
+    x : integer = 10
+}
+
+10 + foo() + 3 * 2 - 2

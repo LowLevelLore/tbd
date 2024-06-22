@@ -13,3 +13,5 @@
 20 June 2024, Working on Parser [Function definitions added to AST (body is TODO)], Video : 10, Timeline : 03:12:00
 20 June 2024, Working on Codegen [Codegen for functions, ASM comes again], Video : 11, Timeline : 01:54:00
 20 June 2024, Working on Codegen [Codegen for functions, ASM comes again], Video : 11, Timeline : Completed
+21 June 2024, Working on Codegen [Codegen for functions, ASM comes again], Video : 13, Timeline : 02:30:41
+22 June 2024, Working on Codegen [Now we add binary operations], Video : 14, Timeline : 02:20:41

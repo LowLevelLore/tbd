@@ -36,6 +36,11 @@ char CG_SYMBOL_BUFFER[CG_SYMBOL_BUFFER_LENGTH];
         return err;                                                            \
     }
 
+#define brk                                                                    \
+    if (err.type != ERROR_NULL) {                                              \
+        break;                                                                 \
+    }
+
 #define CG_WRITE_BUFFER_LENGTH 2048
 char CG_WRITE_BUFFER[CG_WRITE_BUFFER_LENGTH];
 

@@ -18,21 +18,8 @@ void write_line(char *code, FILE *outfile) {
     if (!outfile || !code) {
         return;
     }
-    if (fwrite(code, 1, strlen(code), outfile) != strlen(code)) {
-        Error err;
-        ERROR_PREP(err, ERROR_GENERIC,
-                   "write_line(): Cannot write '%s' bytes to asm file.", code);
-        log_error(&err);
-        exit(0);
-    }
-    if (fwrite("\n", 1, 1, outfile) != 1) {
-        Error err;
-        ERROR_PREP(
-            err, ERROR_GENERIC,
-            "write_line(): Cannot write '<NEW_LINE>' bytes to asm file.");
-        log_error(&err);
-        exit(0);
-    }
+    write_bytes(code, outfile);
+    write_bytes("\n", outfile);
 }
 void write_integer(long long integer, FILE *outfile) {
     if (!outfile) {
@@ -81,6 +68,7 @@ void define_binary_operator(ParsingContext *context, char *operator,
                             char *rhs_type) {
     Node *bin_op = node_allocate();
     bin_op->type = NODE_TYPE_BINARY_OPERATOR;
+    bin_op->value.symbol = operator;
     node_add_child(bin_op, node_integer(precedence));
     node_add_child(bin_op, node_symbol(return_type));
     node_add_child(bin_op, node_symbol(lhs_type));
@@ -92,6 +80,7 @@ void define_binary_operator(ParsingContext *context, char *operator,
 
     int status = environment_set(context->binary_operators,
                                  node_symbol(operator), bin_op);
+
     if (status == 0) {
         Error err;
         ERROR_PREP(
@@ -135,6 +124,68 @@ Error codegen_expression_x86_64_mswin(ParsingContext *context,
                                       Node *expression, FILE *outfile) {
     Error err = OK;
     switch (expression->type) {
+    case NODE_TYPE_INTEGER:
+        expression->result_register = register_allocate(r);
+        LINE("mov $%lld, %s", expression->value.MZ_integer,
+             register_name(r, expression->result_register));
+        ;
+        break;
+    case NODE_TYPE_BINARY_OPERATOR:
+        Node *result = node_allocate();
+        while (context->parent) {
+            context = context->parent;
+        }
+        environment_get(*context->binary_operators,
+                        node_symbol(expression->value.symbol), result);
+
+        // LHS
+        err = codegen_expression_x86_64_mswin(context, cg_context, r,
+                                              expression->children, outfile);
+        // RHS
+        err = codegen_expression_x86_64_mswin(
+            context, cg_context, r, expression->children->next_child, outfile);
+        if (strcmp(expression->value.symbol, "+") == 0) {
+
+            expression->result_register =
+                expression->children->next_child->result_register;
+
+            LINE("add %s, %s",
+                 register_name(r, expression->children->result_register),
+                 register_name(
+                     r, expression->children->next_child->result_register));
+
+            register_deallocate(r, expression->children->result_register);
+
+        } else if (strcmp(expression->value.symbol, "-") == 0) {
+
+            expression->result_register = expression->children->result_register;
+
+            LINE("sub %s, %s",
+                 register_name(
+                     r, expression->children->next_child->result_register),
+                 register_name(r, expression->children->result_register));
+
+            register_deallocate(
+                r, expression->children->next_child->result_register);
+        } else if (strcmp(expression->value.symbol, "*") == 0) {
+
+            expression->result_register =
+                expression->children->next_child->result_register;
+
+            LINE("imul %s, %s",
+                 register_name(r, expression->children->result_register),
+                 register_name(
+                     r, expression->children->next_child->result_register));
+
+            register_deallocate(r, expression->children->result_register);
+        } else if (strcmp(expression->value.symbol, "/") == 0) {
+        } else {
+            ERROR_PREP(err, ERROR_GENERIC, "Unknown Binary operator : '%s'",
+                       expression->value.symbol);
+        }
+
+        free(result);
+        break;
     case NODE_TYPE_FUNCTION_DECLARATION:
         if (!cg_context->parent) {
             break;
@@ -143,7 +194,6 @@ Error codegen_expression_x86_64_mswin(ParsingContext *context,
         buffer = label_generate();
         err = codegen_function_x86_64_att_mswin(context, cg_context, r, buffer,
                                                 expression, outfile);
-        ret;
         break;
     case NODE_TYPE_DEBUG_PRINT_INTEGER:
         // LINE(";#; DEBUG INTEGER PRINTING");
@@ -175,12 +225,7 @@ Error codegen_expression_x86_64_mswin(ParsingContext *context,
         }
         log_message("[TODO] Local Variable Declaration");
         break;
-    case NODE_TYPE_INTEGER:
-        expression->result_register = register_allocate(r);
-        LINE("mov $%lld, %s", expression->value.MZ_integer,
-             register_name(r, expression->result_register));
-        ;
-        break;
+
     case NODE_TYPE_VARIABLE_REASSIGNMENT:
         if (cg_context->parent) {
             log_message("[TODO] Local Variable Reassignment");
@@ -279,7 +324,6 @@ Error codegen_program_x86_64_mswin(ParsingContext *context,
                                    CodegenContext *cg_context, Node *program,
                                    FILE *outfile) {
     Error err = OK;
-
     Register *r = register_create("%rax");
     register_add(r, "%r10");
     register_add(r, "%r11");
@@ -292,6 +336,7 @@ Error codegen_program_x86_64_mswin(ParsingContext *context,
     write_line("\n;#; -------------------------Global Variables "
                "START-------------------------\n",
                outfile);
+    // log_message("HERE");
 
 #ifdef DEBUG_COMPILER
     LINE("fmt: .asciz \"%%lld\\n\"");

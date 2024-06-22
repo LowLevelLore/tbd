@@ -50,7 +50,6 @@ Error parse_get_type(ParsingContext *context, Node *id, Node *result) {
 
 bool parse_integer(Token *token, Node *node) {
     char *end;
-
     if (!token || !node) {
         return (false);
     } else {
@@ -162,10 +161,14 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
                 Node *parameter_list = node_allocate();
                 parameter_list->type = NODE_TYPE_FUNCTION_PARAMS_LIST;
                 node_add_child(working_result, parameter_list);
-
                 // FIXME?: Should we possibly create a parser stack and
                 // evaluate the next expression, then ensure return value is
                 // var. decl. in stack handling below?
+
+                // Node *narg = node_allocate();
+                // narg->type = NODE_TYPE_INITIAL_ARG;
+                // node_add_child(parameter_list, narg);
+
                 for (;;) {
                     EXPECT(expected, ")", current_token, token_length, end);
                     if (expected.found) {
@@ -219,6 +222,11 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
                     break;
                 }
 
+                if (!parameter_list->children) {
+                    Node *none_param = node_allocate();
+                    node_add_child(parameter_list, none_param);
+                }
+
                 // Parse return type.
                 EXPECT(expected, ":", current_token, token_length, end);
                 // TODO/FIXME: Should we allow implicit return type?
@@ -249,13 +257,14 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
                                "return type: \"{ a + b }\"");
                     return err;
                 }
-
                 context = parse_context_create(context);
                 context->operator= node_symbol("fn");
 
                 Node *param_it = working_result->children->children;
-                environment_set(context->variables, param_it->children,
-                                param_it->children->next_child);
+                if (param_it && param_it->children) {
+                    environment_set(context->variables, param_it->children,
+                                    param_it->children->next_child);
+                }
 
                 Node *function_body = node_allocate();
                 function_body->type = NODE_TYPE_PROGRAM;
@@ -397,50 +406,52 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
 
         // Look ahead for a binary infix ? :^
         Token current_copy = current_token;
-        size_t len_copy = token_length;
+        size_t length_copy = token_length;
         char *end_copy = *end;
-
-        err = lex_advance(&current_copy, &len_copy, &end_copy);
+        err = lex_advance(&current_copy, &length_copy, &end_copy);
         ret;
-
-        Node *op_symbol =
-            node_symbol_from_buffer(current_copy.beginning, len_copy);
-
-        Node *op_value = node_allocate();
-
+        Node *operator_symbol =
+            node_symbol_from_buffer(current_copy.beginning, length_copy);
+        Node *operator_value = node_allocate();
         ParsingContext *global = context;
         while (global->parent) {
             global = global->parent;
         }
-
-        if (environment_get(*global->binary_operators, op_symbol, op_value)) {
+        if (environment_get(*global->binary_operators, operator_symbol,
+                            operator_value)) {
             current_token = current_copy;
-            token_length = len_copy;
-            end = &end_copy;
-            long long precedence = op_value->children->value.MZ_integer;
-            // log_system_errors("BEFORE");
-            // log_message("WORKING_RESULT");
-            // print_node(working_result, 0);
-            // log_message("RESULT");
-            // print_node(result, 0);
+            token_length = length_copy;
+            *end = end_copy;
+            long long precedence = operator_value->children->value.MZ_integer;
+
+            // printf("Got op. %s with precedence %lld (working %lld)\n",
+            //        operator_symbol->value.symbol,
+            //        precedence, working_precedence);
+            // printf("working precedence: %lld\n", working_precedence);
+
+            // TODO: Handle grouped expressions through parentheses using
+            // precedence stack.
 
             Node *result_pointer =
                 precedence <= working_precedence ? result : working_result;
+
             Node *result_copy = node_allocate();
             node_copy(result_pointer, result_copy);
             result_pointer->type = NODE_TYPE_BINARY_OPERATOR;
-            result_pointer->value.symbol = op_symbol->value.symbol;
+            result_pointer->value.symbol = operator_symbol->value.symbol;
             result_pointer->children = result_copy;
             result_pointer->next_child = NULL;
+
             Node *rhs = node_allocate();
             node_add_child(result_pointer, rhs);
             working_result = rhs;
 
             working_precedence = precedence;
+
+            free(operator_symbol);
+            free(operator_value);
+
             continue;
-        } else {
-            free_nodes(op_symbol);
-            free_nodes(op_value);
         }
 
         if (!context->parent) {
@@ -472,7 +483,6 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
             if (expected.done || expected.found) {
                 break;
             }
-
             EXPECT(expected, ",", current_token, token_length, end);
             if (expected.done || !expected.found) {
                 ERROR_PREP(err, ERROR_SYNTAX,

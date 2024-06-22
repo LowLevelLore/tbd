@@ -21,7 +21,6 @@ typedef enum NodeType {
 
     NODE_TYPE_BINARY_OPERATOR,
 
-
     // To debug print an integer
     // Syntax: pint var_name
     // NODE_TYPE_DEBUG_PRINT_INTEGER
@@ -37,6 +36,7 @@ typedef enum NodeType {
     /*
         NODE_TYPE_FUNCTION_DECLARATION
             1. PARAM_LIST
+                // 0. INITIAL ARG
                 a. PARAM 1
                 b. PARAM 2
             2. RETURN_TYPE
@@ -46,6 +46,7 @@ typedef enum NodeType {
     NODE_TYPE_FUNCTION_PARAMS_LIST,
     NODE_TYPE_FUNCTION_PARAM,
     NODE_TYPE_FUNCTION_RETURN_TYPE,
+    // NODE_TYPE_INITIAL_ARG,
 
     /*
         NODE_TYPE_FUNCTION_CALL
