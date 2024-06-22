@@ -500,7 +500,6 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
                 Node *type_symbol = node_symbol_from_buffer(
                     current_token.beginning, token_length);
                 Node *type_value = node_allocate();
-                print_node(type_value, 0);
                 parse_get_type(context, type_symbol, type_value);
                 if (type_value->type == NODE_TYPE_NULL) {
                     ERROR_PREP(err, ERROR_TYPE,
