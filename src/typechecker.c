@@ -9,9 +9,33 @@ Error expression_return_type(ParsingContext *context, Node *expression,
     Node *vessel = node_allocate();
     switch (expression->type) {
     case NODE_TYPE_VARIABLE_ACCESS:
-        // parsing_context_print(context, 0);
-        // print_node(vessel, 0);
+        while (context) {
+            if (environment_get(*context->variables, expression->children,
+                                result)) {
+                break;
+            }
+            context = context->parent;
+        }
 
+        if (!context) {
+            printf("Variable : `%s`", expression->value.symbol);
+            ERROR_PREP(err, ERROR_GENERIC,
+                       "Couldnt get variable access return type");
+            break;
+        }
+        context = og_context;
+        while (context) {
+            if (environment_get(*context->types, result, vessel))
+                break;
+            context = context->parent;
+        }
+        if (!context) {
+            printf("Type : `%s`", result->value.symbol);
+            ERROR_PREP(err, ERROR_GENERIC,
+                       "Couldnt get variable accessreturn type");
+            break;
+        }
+        result->type = vessel->type;
         break;
     case NODE_TYPE_BINARY_OPERATOR:
         err = typecheck_expression(context, expression);
@@ -115,11 +139,8 @@ Error typecheck_expression(ParsingContext *context, Node *expression) {
         }
         int exprected = 0;
         int recieved = 0;
-        // print_node(vessel_0, 0);
-        // print_node(expression, 0);
         vessel_1 = vessel_0->children->children;
         vessel_0 = expression->children->next_child->children;
-        // log_message("HERE");
         while (vessel_1 && vessel_0) {
             if (vessel_1->type == NODE_TYPE_NULL &&
                 vessel_0->type != NODE_TYPE_NULL) {
@@ -135,9 +156,10 @@ Error typecheck_expression(ParsingContext *context, Node *expression) {
             }
             exprected++;
             recieved++;
-            parse_get_type(og_context, vessel_1->children->next_child,
-                           vessel_2);
-            if (vessel_2->type != vessel_0->type) {
+            int v1;
+            expression_return_type(context, vessel_0, &v1);
+            parse_get_type(context, vessel_1->children->next_child, vessel_2);
+            if (v1 != vessel_2->type) {
                 ERROR_PREP(
                     err, ERROR_TYPE,
                     "The %dth argument of the function call [%s] doesn't "
