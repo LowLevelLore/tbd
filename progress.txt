@@ -15,3 +15,4 @@
 20 June 2024, Working on Codegen [Codegen for functions, ASM comes again], Video : 11, Timeline : Completed
 21 June 2024, Working on Codegen [Codegen for functions, ASM comes again], Video : 13, Timeline : 02:30:41
 22 June 2024, Working on Codegen [Now we add binary operations], Video : 14, Timeline : 02:20:41
+24 June 2024, Needed a break, parser is trash [Codegen function calls], Video : 15, Timeline : 02:30:41 [Video 16 done BTW]

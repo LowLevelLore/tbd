@@ -14,13 +14,16 @@
 
 #define MAX_ARGS_ITER 200
 
+typedef struct ParsingStack {
+    struct ParsingStack *parent;
+    Node *operator;
+    Node *result;
+} ParsingStack;
+
 typedef struct ParsingContext {
     struct ParsingContext *parent;
     struct ParsingContext *children;
     struct ParsingContext *next_child;
-    // For stack continuation while parsng
-    Node *operator;
-    Node *result;
     // ID -> TYPES
     Environment *types;
     // VARIABLES -> VALUES
@@ -29,6 +32,7 @@ typedef struct ParsingContext {
     Environment *binary_operators;
 } ParsingContext;
 
+void parsing_context_print(ParsingContext *top, size_t indent_level);
 ParsingContext *parse_context_create(ParsingContext *);
 ParsingContext *parse_context_default_create();
 bool parse_int(Token *, Node *);

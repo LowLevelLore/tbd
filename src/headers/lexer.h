@@ -32,14 +32,13 @@ typedef struct ExpectReturnValue {
     if (expected.err.type) {                                                   \
         return expected.err;                                                   \
     }                                                                          \
-    if (expected.done) {                                                       \
-        return OK;                                                             \
-    }
+
 
 bool comment_at_beginning(Token);
 bool token_equals_string(char *, Token *);
 Error lex(char *, Token *);
 Error lex_advance(Token *, size_t *, char **);
 ExpectReturnValue lex_expect(char *, Token *, size_t *, char **);
+void print_token(Token);
 
 #endif

@@ -8,6 +8,11 @@ Error expression_return_type(ParsingContext *context, Node *expression,
     Node *result = node_allocate();
     Node *vessel = node_allocate();
     switch (expression->type) {
+    case NODE_TYPE_VARIABLE_ACCESS:
+        // parsing_context_print(context, 0);
+        // print_node(vessel, 0);
+
+        break;
     case NODE_TYPE_BINARY_OPERATOR:
         err = typecheck_expression(context, expression);
         brk;
@@ -110,8 +115,8 @@ Error typecheck_expression(ParsingContext *context, Node *expression) {
         }
         int exprected = 0;
         int recieved = 0;
-        print_node(vessel_0, 0);
-        print_node(expression, 0);
+        // print_node(vessel_0, 0);
+        // print_node(expression, 0);
         vessel_1 = vessel_0->children->children;
         vessel_0 = expression->children->next_child->children;
         // log_message("HERE");
@@ -143,16 +148,15 @@ Error typecheck_expression(ParsingContext *context, Node *expression) {
             vessel_0 = vessel_0->next_child;
             vessel_1 = vessel_1->next_child;
         }
-        log_message("HERE");
 
         if (vessel_0 != NULL || vessel_1 != NULL) {
             while (vessel_0 != NULL) {
-                print_node(vessel_0, 0);
+                // print_node(vessel_0, 0);
                 recieved++;
                 vessel_0 = vessel_0->next_child;
             }
             while (vessel_1 != NULL) {
-                print_node(vessel_1, 0);
+                // print_node(vessel_1, 0);
                 exprected++;
                 vessel_1 = vessel_1->next_child;
             }
@@ -165,6 +169,11 @@ Error typecheck_expression(ParsingContext *context, Node *expression) {
             ret;
         }
 
+        break;
+
+    case NODE_TYPE_FUNCTION_DECLARATION:
+        err = typecheck_expression(
+            context->children, expression->children->next_child->next_child);
         break;
 
     default:

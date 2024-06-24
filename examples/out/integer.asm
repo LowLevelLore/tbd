@@ -4,8 +4,8 @@
 ;#; -------------------------Global Variables START-------------------------
 
 fmt: .asciz "%lld\n"
-b: .space 0
-a: .space 0
+b: .space 8
+a: .space 8
 
 ;#; -------------------------Global Variables END-------------------------
 
@@ -14,19 +14,6 @@ a: .space 0
 
 ;#; -------------------------Global Functions START-------------------------
 
-jmp MZ_fn_afterfoo
-MZ_fn_foo:
-;#; ==== ALIGN HEADER ====
-push %rbp
-mov %rsp, %rbp
-sub $32, %rsp
-
-
-add $32, %rsp
-pop %rbp
-ret
-;#; ==== ALIGN FOOTER ====
-MZ_fn_afterfoo:
 
 ;#; -------------------------Global Functions END-------------------------
 
@@ -37,29 +24,16 @@ mov %rsp, %rbp
 sub $32, %rsp
 
 lea a(%rip), %rax
-movq $69, (%rax)
-mov %rax, %rbx
-lea fmt(%rip), %rcx
-lea a(%rip), %r12
-mov (%r12), %rdx
-call printf
-mov %rax, %rbx
-movq $420, a(%rip)
-mov %rax, %rbx
-lea fmt(%rip), %rcx
-lea a(%rip), %r12
-mov (%r12), %rdx
-call printf
-mov %rax, %rbx
+movq $10, (%rax)
 lea b(%rip), %rax
-movq $0, (%rax)
+movq $20, (%rax)
+movq $30, a(%rip)
 mov %rax, %rbx
 lea fmt(%rip), %rcx
-lea b(%rip), %r12
+lea a(%rip), %r12
 mov (%r12), %rdx
 call printf
 mov %rax, %rbx
-movq $42, b(%rip)
 mov %rax, %rbx
 lea fmt(%rip), %rcx
 lea b(%rip), %r12

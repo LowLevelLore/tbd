@@ -47,6 +47,7 @@ CodegenContext *codegen_context_create(CodegenContext *parent) {
     CodegenContext *cg_ctx = calloc(1, sizeof(CodegenContext));
     cg_ctx->parent = parent;
     cg_ctx->locals = environment_create(NULL);
+    cg_ctx->locals_offset = -32;
     return cg_ctx;
 }
 
@@ -100,35 +101,55 @@ void define_binary_operator(ParsingContext *context, char *operator,
 //======================MZ_CODEGEN_OUTPUT_FORMAT_x86_64_ASM_MSWIN
 // BEGINS======================
 
-char *symbol_to_addr(Node *symbol) {
+char *symbol_to_addr(CodegenContext *cg_context, Node *symbol) {
     char *symbol_str = CG_SYMBOL_BUFFER + symbol_index;
     // For global variables
-    symbol_index += snprintf(symbol_str, CG_SYMBOL_BUFFER_LENGTH - symbol_index,
-                             "%s(%%rip)", symbol->value.symbol);
+    if (!cg_context->parent) {
+        symbol_index +=
+            snprintf(symbol_str, CG_SYMBOL_BUFFER_LENGTH - symbol_index,
+                     "%s(%%rip)", symbol->value.symbol);
+    } else {
+        Node *stack_offset = node_allocate();
+        if (!environment_get(*cg_context->locals, symbol, stack_offset)) {
+            log_system_errors("INTERNAL COMPILER ERROR :( !");
+            return NULL;
+        }
+        symbol_index +=
+            snprintf(symbol_str, CG_SYMBOL_BUFFER_LENGTH - symbol_index,
+                     "%lld(%%rbp)", stack_offset->value.MZ_integer);
+        free(stack_offset);
+    }
     // TODO: Local Variables
     symbol_index++;
     if (symbol_index >= CG_SYMBOL_BUFFER_LENGTH) {
         symbol_index = 0;
-        return symbol_to_addr(symbol);
+        return symbol_to_addr(cg_context, symbol);
     }
     return symbol_str;
 }
 
 Error codegen_function_x86_64_att_mswin(ParsingContext *context,
+                                        ParsingContext **next_child,
                                         CodegenContext *cg_context, Register *r,
                                         char *name, Node *function,
                                         FILE *outfile);
 
 Error codegen_expression_x86_64_mswin(ParsingContext *context,
+                                      ParsingContext *next_child,
                                       CodegenContext *cg_context, Register *r,
                                       Node *expression, FILE *outfile) {
     Error err = OK;
+    Node *vessel_0 = node_allocate();
+    Node *vessel_1 = node_allocate();
+    Node *vessel_2 = node_allocate();
+    char *buffer = (char *)malloc(256 * sizeof(char));
     switch (expression->type) {
+    case NODE_TYPE_FUNCTION_CALL:
+        break;
     case NODE_TYPE_INTEGER:
         expression->result_register = register_allocate(r);
         LINE("mov $%lld, %s", expression->value.MZ_integer,
              register_name(r, expression->result_register));
-        ;
         break;
     case NODE_TYPE_BINARY_OPERATOR:
         Node *result = node_allocate();
@@ -139,11 +160,12 @@ Error codegen_expression_x86_64_mswin(ParsingContext *context,
                         node_symbol(expression->value.symbol), result);
 
         // LHS
-        err = codegen_expression_x86_64_mswin(context, cg_context, r,
-                                              expression->children, outfile);
+        err = codegen_expression_x86_64_mswin(context, next_child, cg_context,
+                                              r, expression->children, outfile);
         // RHS
         err = codegen_expression_x86_64_mswin(
-            context, cg_context, r, expression->children->next_child, outfile);
+            context, next_child, cg_context, r,
+            expression->children->next_child, outfile);
         if (strcmp(expression->value.symbol, "+") == 0) {
 
             expression->result_register =
@@ -190,61 +212,105 @@ Error codegen_expression_x86_64_mswin(ParsingContext *context,
         if (!cg_context->parent) {
             break;
         }
-        char *buffer = (char *)malloc(256 * sizeof(char));
+
         buffer = label_generate();
-        err = codegen_function_x86_64_att_mswin(context, cg_context, r, buffer,
-                                                expression, outfile);
+        err = codegen_function_x86_64_att_mswin(
+            context, &next_child, cg_context, r, buffer, expression, outfile);
         break;
     case NODE_TYPE_DEBUG_PRINT_INTEGER:
-        // LINE(";#; DEBUG INTEGER PRINTING");
         LINE("mov %%rax, %%rbx");
         LINE("lea fmt(%%rip), %%rcx");
-        LINE("lea %s, %%r12", symbol_to_addr(expression->children));
+        LINE("lea %s, %%r12",
+             symbol_to_addr(cg_context, expression->children->children));
         LINE("mov (%%r12), %%rdx");
         LINE("call printf");
         LINE("mov %%rax, %%rbx");
-        // LINE(";#; DEBUG INTEGER PRINTING");
 
         break;
     case NODE_TYPE_VARIABLE_DECLARATION:
         if (!cg_context->parent) {
             if (expression->children->next_child->type == NODE_TYPE_NULL) {
-                LINE("lea %s, %%rax", symbol_to_addr(expression->children));
+                LINE("lea %s, %%rax",
+                     symbol_to_addr(cg_context, expression->children));
                 LINE("movq $0, (%%rax)");
             } else if (expression->children->next_child->type ==
                        NODE_TYPE_BINARY_OPERATOR) {
 
             } else {
-                LINE("lea %s, %%rax", symbol_to_addr(expression->children));
+                LINE("lea %s, %%rax",
+                     symbol_to_addr(cg_context, expression->children));
                 BYTES("movq $");
                 write_integer(
                     expression->children->next_child->value.MZ_integer,
                     outfile);
                 LINE(", (%%rax)");
             }
+            break;
         }
-        log_message("[TODO] Local Variable Declaration");
-        break;
+        // Making space for integer
+        ParsingContext *found_context = context;
+        while (found_context) {
+            if (environment_get(*found_context->variables, expression->children,
+                                vessel_0)) {
+                break;
 
+                found_context = found_context->parent;
+            }
+        }
+        print_node(expression, 0);
+        parse_get_type(found_context, vessel_0, vessel_1);
+        LINE("sub $%lld, %%rsp", vessel_1->children->value.MZ_integer);
+        environment_set(cg_context->locals, expression->children,
+                        node_integer(cg_context->locals_offset));
+
+        if (expression->children->next_child->type == NODE_TYPE_INTEGER) {
+            LINE("movq $%lld, %lld(%%rbp)",
+                 expression->children->next_child->value.MZ_integer,
+                 cg_context->locals_offset);
+        }
+
+        cg_context->locals_offset -= vessel_1->children->value.MZ_integer;
+
+        break;
+    case NODE_TYPE_VARIABLE_ACCESS:
+        if (!context->parent) {
+            expression->result_register = register_allocate(r);
+            LINE("mov %s(%%rip), %s", expression->children->value.symbol,
+                 register_name(r, expression->result_register));
+        } else {
+
+            if (!environment_get(*cg_context->locals, expression->children,
+                                 vessel_0)) {
+                ERROR_PREP(err, ERROR_GENERIC, "Internal Compiler Error");
+                break;
+            }
+
+            expression->result_register = register_allocate(r);
+            LINE("mov %lld(%%rbp), %s", vessel_0->value.MZ_integer,
+                 register_name(r, expression->result_register));
+        }
+        break;
     case NODE_TYPE_VARIABLE_REASSIGNMENT:
         if (cg_context->parent) {
-            log_message("[TODO] Local Variable Reassignment");
+            LINE("movq $%lld, %s",
+                 expression->children->next_child->value.MZ_integer,
+                 symbol_to_addr(cg_context, expression->children));
         } else {
             if (expression->children->next_child->type == NODE_TYPE_INTEGER) {
                 BYTES("movq $");
                 write_integer(
                     expression->children->next_child->value.MZ_integer,
                     outfile);
-                LINE(", %s", symbol_to_addr(expression->children));
+                LINE(", %s", symbol_to_addr(cg_context, expression->children));
             } else {
                 err = codegen_expression_x86_64_mswin(
-                    context, cg_context, r, expression->children->next_child,
-                    outfile);
+                    context, next_child, cg_context, r,
+                    expression->children->next_child, outfile);
                 ret;
                 char *result_register = register_name(
                     r, expression->children->next_child->result_register);
                 LINE("mov %s, %s", result_register,
-                     symbol_to_addr(expression->children));
+                     symbol_to_addr(cg_context, expression->children));
                 register_deallocate(
                     r, expression->children->next_child->result_register);
             }
@@ -254,6 +320,10 @@ Error codegen_expression_x86_64_mswin(ParsingContext *context,
     default:
         break;
     }
+    free(buffer);
+    free(vessel_0);
+    free(vessel_1);
+    free(vessel_2);
     return err;
 }
 
@@ -267,9 +337,8 @@ void codegen_header_x86_64_att_mswin(FILE *outfile) {
 
 void codegen_footer_x86_64_att_mswin(FILE *outfile, bool exit_code) {
     if (!exit_code) {
-        char *lines[5] = {"", "add $32, %rsp", "pop %rbp", "ret",
-                          ";#; ==== ALIGN FOOTER ===="};
-        for (int i = 0; i < 5; i++) {
+        char *lines[3] = {"pop %rbp", "ret", ";#; ==== ALIGN FOOTER ===="};
+        for (int i = 0; i < 3; i++) {
             write_line(lines[i], outfile);
         }
     } else {
@@ -283,6 +352,7 @@ void codegen_footer_x86_64_att_mswin(FILE *outfile, bool exit_code) {
 }
 
 Error codegen_function_x86_64_att_mswin(ParsingContext *context,
+                                        ParsingContext **next_child,
                                         CodegenContext *cg_context, Register *r,
                                         char *name, Node *function,
                                         FILE *outfile) {
@@ -305,17 +375,22 @@ Error codegen_function_x86_64_att_mswin(ParsingContext *context,
     LINE("MZ_fn_%s:", name);
 
     codegen_header_x86_64_att_mswin(outfile);
+    ParsingContext *ctx = next_child ? *next_child : context;
     Node *expression = function->children->next_child->next_child->children;
     while (expression) {
-        err = codegen_expression_x86_64_mswin(context, cg_context, r,
+        err = codegen_expression_x86_64_mswin(ctx, *next_child, cg_context, r,
                                               expression, outfile);
         ret;
         expression = expression->next_child;
     }
-    cg_context = cg_context->parent;
+    if (next_child)
+        *next_child = (*next_child)->next_child;
+    LINE(" ");
+    LINE("add $%lld, %%rsp", -cg_context->locals_offset);
     codegen_footer_x86_64_att_mswin(outfile, false);
 
     LINE("MZ_fn_after%s:", name);
+    cg_context = cg_context->parent;
 
     return err;
 }
@@ -350,7 +425,7 @@ Error codegen_program_x86_64_mswin(ParsingContext *context,
         Node *type_info = node_allocate();
         environment_get(*context->types, type, type_info);
         LINE("%s: .space %lld", var_id->value.symbol,
-             type_info->value.MZ_integer);
+             type_info->children->value.MZ_integer);
         var_it = var_it->next;
     }
 
@@ -366,6 +441,7 @@ Error codegen_program_x86_64_mswin(ParsingContext *context,
                outfile);
 
     Binding *func_it = context->functions->binding;
+    ParsingContext *next_child = context->children;
 
     while (func_it) {
         Node *func_id = func_it->id;
@@ -373,8 +449,8 @@ Error codegen_program_x86_64_mswin(ParsingContext *context,
         func_it = func_it->next;
 
         char *name = func_id->value.symbol;
-        err = codegen_function_x86_64_att_mswin(context, cg_context, r, name,
-                                                function, outfile);
+        err = codegen_function_x86_64_att_mswin(
+            context, &next_child, cg_context, r, name, function, outfile);
         ret;
     }
 
@@ -384,11 +460,11 @@ Error codegen_program_x86_64_mswin(ParsingContext *context,
 
     LINE("_start:");
     codegen_header_x86_64_att_mswin(outfile);
-
     Node *expression = program->children;
     while (expression) {
-        codegen_expression_x86_64_mswin(context, cg_context, r, expression,
-                                        outfile);
+        codegen_expression_x86_64_mswin(context, next_child, cg_context, r,
+                                        expression, outfile);
+        register_deallocate(r, expression->result_register);
         expression = expression->next_child;
     }
 

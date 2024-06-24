@@ -7,6 +7,14 @@ Token *create_token() {
     return token;
 };
 
+void print_token(Token t) {
+    if (t.end - t.beginning < 1) {
+        printf("INVALID TOKEN POINTERS");
+    } else {
+        printf("%.*s", (int)(t.end - t.beginning), t.beginning);
+    }
+}
+
 bool comment_at_beginning(Token token) {
     const char *comment_it = COMMENT_DEIMETER;
     while (*comment_it) {

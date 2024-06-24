@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define nullp(node) ((node).type == NODE_TYPE_NULL)
+#define nonep(node) ((node).type == NODE_TYPE_NULL)
 #define integerp(node) ((node).type == NODE_TYPE_INTEGER)
 #define symbolp(node) ((node).type == NODE_TYPE_SYMBOL)
 
@@ -67,6 +67,7 @@ typedef union NodeValue {
 typedef struct Node {
     int type;
     NodeValue value;
+    struct Node *parent;
     struct Node *children;
     struct Node *next_child;
     int result_register;
@@ -85,6 +86,7 @@ typedef struct Environment {
 
 void free_nodes(Node *);
 
+void print_environment(Environment *env, size_t indent_level);
 Environment *environment_create(Environment *);
 int environment_set(Environment *, Node *, Node *);
 bool environment_get(Environment, Node *, Node *);

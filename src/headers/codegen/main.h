@@ -16,6 +16,7 @@ typedef struct CodegenContext {
     // LOCALS
     //      --> SYMBOL(NAME) -> INTEGER(STACK OFFSET)
     Environment *locals;
+    long long locals_offset;
 } CodegenContext;
 
 #define CG_MAX_INT_BUFFER_LENGTH 32

@@ -148,6 +148,7 @@ void node_add_child(Node *parent, Node *new_child) {
     if (!parent || !new_child) {
         return;
     }
+    new_child->parent = parent;
     if (parent->children) {
         Node *child = parent->children;
         while (child->next_child) {
@@ -223,7 +224,7 @@ int node_compare(Node *a, Node *b) {
     }
     switch (a->type) {
     case NODE_TYPE_NULL:
-        if (nullp(*b)) {
+        if (nonep(*b)) {
             return 1;
         }
         return 0;
