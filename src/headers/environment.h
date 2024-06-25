@@ -54,6 +54,9 @@ typedef enum NodeType {
             1. Function Symbol
             2. Parameter List
     */
+    NODE_TYPE_IF,
+    NODE_TYPE_CONDITION,
+    NODE_TYPE_ELSE,
     NODE_TYPE_FUNCTION_CALL,
     NODE_TYPE_FUNCTION_ARGS_LIST,
 } NodeType;

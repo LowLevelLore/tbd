@@ -2,6 +2,6 @@ fn foo(i: integer):integer{
     i*2
 }
 
-i: integer = foo(8) + 96
-
+i : integer = 2
+i := foo(i) + 7
 pint i

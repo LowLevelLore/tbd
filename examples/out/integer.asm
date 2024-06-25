@@ -24,20 +24,22 @@ mov %rsp, %rbp
 sub $32, %rsp
 
 lea a(%rip), %rax
-movq $10, (%rax)
+mov $10, %r10
+mov %r10, a(%rip)
 lea b(%rip), %rax
-movq $20, (%rax)
+mov $20, %r11
+mov %r11, b(%rip)
 movq $30, a(%rip)
+mov a(%rip), %rax
+mov %rax, %rdx
 mov %rax, %rbx
 lea fmt(%rip), %rcx
-lea a(%rip), %r12
-mov (%r12), %rdx
 call printf
 mov %rax, %rbx
+mov b(%rip), %rax
+mov %rax, %rdx
 mov %rax, %rbx
 lea fmt(%rip), %rcx
-lea b(%rip), %r12
-mov (%r12), %rdx
 call printf
 mov %rax, %rbx
 

@@ -23,16 +23,7 @@ mov %rsp, %rbp
 sub $32, %rsp
 
 lea a(%rip), %rax
-movq $10, (%rax)
+mov $10, %r10
+mov %r10, a(%rip)
 mov $2, %rax
-mov $3, %r10
-mov $5, %r11
-imul %r10, %r11
-add %rax, %r11
-mov a(%rip), %rax
-
-mov $0, %rax
-add $32, %rsp
-pop %rbp
-ret
-;#; ==== ALIGN FOOTER ====
+mov a(%rip), %r11

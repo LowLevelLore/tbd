@@ -238,6 +238,18 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
 #endif // DEBUG
 
             if (strcmp("if", symbol->value.symbol) == 0) {
+                Node *if_conditional = working_result;
+                if_conditional->type = NODE_TYPE_IF;
+                Node *condition = node_allocate();
+                condition->type = NODE_TYPE_CONDITION;
+                Node *cond_exr = node_allocate();
+                node_add_child(condition, cond_exr);
+                node_add_child(if_conditional, condition);
+                working_result = cond_exr;
+
+                stack = parse_stack_create(stack);
+                stack->operator= node_symbol("if-condition");
+                stack->result = if_conditional;
                 continue;
             }
 
@@ -529,8 +541,19 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
                 EXPECT(expected, "=", current_token, token_length, end);
                 if (expected.found) {
                     Node *variable_binding = node_allocate();
-                    if (!environment_get(*context->variables, symbol,
+
+                    ParsingContext *context_it = context;
+
+                    while (context_it) {
+                        if (environment_get(*context_it->variables, symbol,
+                                            variable_binding))
+                            break;
+                        context_it = context_it->parent;
+                    }
+
+                    if (!environment_get(*context_it->variables, symbol,
                                          variable_binding)) {
+
                         // TODO: Add source location or something to the error.
                         // TODO: Create new error type.
                         printf("ID of undeclared variable: \"%s\"\n",
@@ -682,6 +705,47 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
                        "Parsing context operator must be symbol. Likely "
                        "internal error :(");
             return err;
+        }
+
+        if (strcmp(operator->value.symbol, "if-body") == 0) {
+            EXPECT(expected, "}", current_token, token_length, end);
+            if (expected.found) {
+                context = context->parent;
+                stack = stack->parent;
+                if (!stack) {
+                    break;
+                }
+            } else {
+                ERROR_PREP(err, ERROR_GENERIC, "If requires a body");
+                ret;
+            }
+            stack->result->next_child = node_allocate();
+            working_result = stack->result->next_child;
+            stack->result = working_result;
+            continue;
+        }
+
+        if (strcmp(operator->value.symbol, "if-condition") == 0) {
+            EXPECT(expected, "{", current_token, token_length, end);
+            if (expected.found) {
+                working_result = stack->result;
+                stack = stack->parent;
+                Node *if_body = node_allocate();
+                if_body->type = NODE_TYPE_PROGRAM;
+                stack = parse_stack_create(stack);
+                stack->operator= node_symbol("if-body");
+                stack->result = if_body;
+                context = parse_context_create(context);
+                Node *first_expr = node_allocate();
+                node_add_child(if_body, first_expr);
+                node_add_child(working_result, if_body);
+                working_result = first_expr;
+                stack->result = working_result;
+                continue;
+            } else {
+                ERROR_PREP(err, ERROR_GENERIC, "If requires a body");
+                ret;
+            }
         }
 
         if (strcmp(operator->value.symbol, "lambda") == 0) {

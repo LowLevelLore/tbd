@@ -157,6 +157,16 @@ Error codegen_expression_x86_64_mswin(ParsingContext *context,
             register_deallocate(r, vessel_0->result_register);
             if (vessel_0->type == NODE_TYPE_INTEGER) {
                 offset += 8;
+            } else if (vessel_0->type == NODE_TYPE_VARIABLE_ACCESS) {
+                while (context) {
+                    if (environment_get(*context->variables, vessel_0->children,
+                                        vessel_1)) {
+                        break;
+                    }
+                    context = context->parent;
+                }
+                parse_get_type(context, vessel_1, vessel_2);
+                offset += vessel_2->children->value.MZ_integer;
             }
             vessel_0 = vessel_0->next_child;
         }
@@ -240,7 +250,6 @@ Error codegen_expression_x86_64_mswin(ParsingContext *context,
         ret;
         break;
     case NODE_TYPE_DEBUG_PRINT_INTEGER:
-        parsing_context_print(context, 0);
         err = codegen_expression_x86_64_mswin(context, next_child, cg_context,
                                               r, expression->children, outfile);
         LINE("mov %s, %%rdx",

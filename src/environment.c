@@ -63,9 +63,15 @@ void print_node_internal(Node *node, size_t indent_level, char *color,
     case NODE_TYPE_FUNCTION_ARGS_LIST:
         printf("[NODE_TYPE_FUNCTION_ARGS_LIST] : ");
         break;
-    // case NODE_TYPE_INITIAL_ARG:
-    //     printf("[INITIAL ARGUMENT] : ");
-    //     break;
+    case NODE_TYPE_IF:
+        printf("[IF STATEMENT] : ");
+        break;
+    case NODE_TYPE_CONDITION:
+        printf("[CONDITION] : ");
+        break;
+    case NODE_TYPE_ELSE:
+        printf("[ELSE STATEMENT] : ");
+        break;
     case NODE_TYPE_DEBUG_PRINT_INTEGER:
         printf("[NODE_TYPE_DEBUG_PRINT_INTEGER] : ");
         break;

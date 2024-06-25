@@ -4,7 +4,7 @@
 ;#; -------------------------Global Variables START-------------------------
 
 fmt: .asciz "%lld\n"
-i: .space 8
+a: .space 8
 
 ;#; -------------------------Global Variables END-------------------------
 
@@ -13,24 +13,6 @@ i: .space 8
 
 ;#; -------------------------Global Functions START-------------------------
 
-jmp MZ_fn_afterfoo
-MZ_fn_foo:
-;#; ==== ALIGN HEADER ====
-push %rbp
-mov %rsp, %rbp
-sub $32, %rsp
-
-mov 16(%rbp), %rax
-mov $2, %r10
-imul %rax, %r10
-mov %r10, %rax
-
- 
-add $32, %rsp
-pop %rbp
-ret
-;#; ==== ALIGN FOOTER ====
-MZ_fn_afterfoo:
 
 ;#; -------------------------Global Functions END-------------------------
 
@@ -40,7 +22,11 @@ push %rbp
 mov %rsp, %rbp
 sub $32, %rsp
 
-lea i(%rip), %rax
-mov $2, %r11
-mov %r11, i(%rip)
-mov i(%rip), %rax
+lea a(%rip), %rax
+movq $0, (%rax)
+
+mov $0, %rax
+add $32, %rsp
+pop %rbp
+ret
+;#; ==== ALIGN FOOTER ====
