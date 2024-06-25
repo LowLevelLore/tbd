@@ -23,7 +23,8 @@ mov %rsp, %rbp
 sub $32, %rsp
 
 lea a(%rip), %rax
-movq $0, (%rax)
+mov $20, %r10
+mov %r10, a(%rip)
 
 mov $0, %rax
 add $32, %rsp

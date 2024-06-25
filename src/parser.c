@@ -534,6 +534,42 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
             // attempt to pattern match variable access, assignment,
             // declaration, or declaration with initialization.
 
+            EXPECT(expected, "=", current_token, token_length, end);
+            if (expected.found) {
+                Node *variable_binding = node_allocate();
+
+                ParsingContext *context_it = context;
+
+                while (context_it) {
+                    if (environment_get(*context_it->variables, symbol,
+                                        variable_binding))
+                        break;
+                    context_it = context_it->parent;
+                }
+
+                if (!environment_get(*context_it->variables, symbol,
+                                     variable_binding)) {
+
+                    // TODO: Add source location or something to the error.
+                    // TODO: Create new error type.
+                    printf("ID of undeclared variable: \"%s\"\n",
+                           symbol->value.symbol);
+                    ERROR_PREP(err, ERROR_GENERIC,
+                               "Reassignment of a variable that has not "
+                               "been declared!");
+                    return err;
+                }
+                free(variable_binding);
+
+                working_result->type = NODE_TYPE_VARIABLE_REASSIGNMENT;
+                node_add_child(working_result, symbol);
+                Node *reassign_expr = node_allocate();
+                node_add_child(working_result, reassign_expr);
+
+                working_result = reassign_expr;
+                continue;
+            }
+
             EXPECT(expected, ":", current_token, token_length, end);
             if (!expected.done && expected.found) {
 

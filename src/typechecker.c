@@ -112,7 +112,7 @@ Error typecheck_expression(ParsingContext *context, Node *expression) {
         brk;
 
         if (type != vessel_1->type) {
-            printf("Exprected: %d, Recieved: %d\n", vessel_1->type, type);
+            printf("Expected: %d, Recieved: %d\n", vessel_1->type, type);
             ERROR_PREP(err, ERROR_TYPE, "Mismatched LHS Type");
             brk;
         }

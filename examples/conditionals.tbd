@@ -1,10 +1,10 @@
-a : integer
+a : integer = 20
 if 1 {
     if 4 {
-        a := 67
+        a = 67
     }
-    a := 69
+    a = 69
 }
 if a {
-    a := 420
+    a = 420
 }
