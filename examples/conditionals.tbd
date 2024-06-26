@@ -1,9 +1,5 @@
-fn foo(i: integer):integer{
-    k : integer = 10
-    pint i
-    2 * 2
-}
+a : integer = 2
 
-k: integer = 3
-a : integer = foo(k + 2)
-pint a
+if a - 2 = 0 {
+    pint a
+}

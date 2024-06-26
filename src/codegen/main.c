@@ -54,7 +54,7 @@ CodegenContext *codegen_context_create(CodegenContext *parent) {
 char *label_generate() {
     char *label = CG_LABEL_BUFFER + label_index;
     label_index += snprintf(label, CG_LABEL_BUFFER_LENGTH - label_index,
-                            ".L%ld:\n", label_count);
+                            ".L%ld", label_count);
     label_index++;
     if (label_index >= CG_LABEL_BUFFER_LENGTH) {
         label_index = 0;
@@ -145,6 +145,33 @@ Error codegen_expression_x86_64_mswin(ParsingContext *context,
     Node *vessel_2 = node_allocate();
     char *buffer = (char *)malloc(256 * sizeof(char));
     switch (expression->type) {
+    case NODE_TYPE_IF:
+        err =
+            codegen_expression_x86_64_mswin(og_context, next_child, cg_context,
+                                            r, expression->children, outfile);
+        ret;
+        char *otherwise_label = label_generate();
+        char *condition_register_name =
+            register_name(r, expression->children->result_register);
+        LINE("test %s, %s", condition_register_name, condition_register_name);
+        LINE("jz %s", otherwise_label);
+        register_deallocate(r, expression->children->result_register);
+
+        vessel_0 = expression->children->next_child->children;
+        Node *last_expr = NULL;
+        while (vessel_0) {
+            err = codegen_expression_x86_64_mswin(
+                context, next_child, cg_context, r, vessel_0, outfile);
+            ret;
+            if (last_expr) {
+                register_deallocate(r, last_expr->result_register);
+            }
+            last_expr = vessel_0;
+            vessel_0 = vessel_0->next_child;
+        }
+        LINE("%s:", otherwise_label);
+
+        break;
     case NODE_TYPE_FUNCTION_CALL:
         // TODO: Push the arguments in reverse order
 
@@ -193,10 +220,12 @@ Error codegen_expression_x86_64_mswin(ParsingContext *context,
         err =
             codegen_expression_x86_64_mswin(og_context, next_child, cg_context,
                                             r, expression->children, outfile);
+        ret;
         // RHS
         err = codegen_expression_x86_64_mswin(
             og_context, next_child, cg_context, r,
             expression->children->next_child, outfile);
+        ret;
         if (strcmp(expression->value.symbol, "+") == 0) {
 
             expression->result_register =
@@ -232,7 +261,23 @@ Error codegen_expression_x86_64_mswin(ParsingContext *context,
 
             register_deallocate(r, expression->children->result_register);
         } else if (strcmp(expression->value.symbol, "/") == 0) {
-        } else {
+        } else if (strcmp(expression->value.symbol, "=") == 0) {
+            expression->result_register = register_allocate(r);
+
+            LINE("mov $0, %s", register_name(r, expression->result_register));
+            LINE("test %s, %s",
+                 register_name(r, expression->children->result_register),
+                 register_name(
+                     r, expression->children->next_child->result_register));
+            LINE("mov $1, %%r8");
+            LINE("cmov %%r8, %s", register_name(r, expression->result_register));
+
+            register_deallocate(r, expression->children->result_register);
+            register_deallocate(
+                r, expression->children->next_child->result_register);
+        }
+
+        else {
             ERROR_PREP(err, ERROR_GENERIC, "Unknown Binary operator : '%s'",
                        expression->value.symbol);
         }

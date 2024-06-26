@@ -18,6 +18,7 @@ typedef struct ParsingStack {
     struct ParsingStack *parent;
     Node *operator;
     Node *result;
+    Node *body;
 } ParsingStack;
 
 typedef struct ParsingContext {
