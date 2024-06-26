@@ -9,6 +9,7 @@ Error expression_return_type(ParsingContext *context, Node *expression,
     Node *vessel = node_allocate();
     switch (expression->type) {
     case NODE_TYPE_VARIABLE_ACCESS:
+        // parsing_context_print(og_context, 0);
         while (context) {
             if (environment_get(*context->variables, expression->children,
                                 result)) {
@@ -99,6 +100,7 @@ Error typecheck_expression(ParsingContext *context, Node *expression) {
 
     switch (expression->type) {
     case NODE_TYPE_BINARY_OPERATOR:
+        // parsing_context_print(og_context, 0);
         while (context->parent) {
             context = context->parent;
         }
@@ -193,10 +195,6 @@ Error typecheck_expression(ParsingContext *context, Node *expression) {
 
         break;
 
-    case NODE_TYPE_FUNCTION_DECLARATION:
-        err = typecheck_expression(
-            context->children, expression->children->next_child->next_child);
-        break;
 
     default:
         break;

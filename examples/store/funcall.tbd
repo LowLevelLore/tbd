@@ -3,5 +3,5 @@ fn foo(i: integer):integer{
 }
 
 i : integer = 2
-i = foo(i)
+i = foo(i) + 2
 pint i

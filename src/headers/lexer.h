@@ -28,7 +28,7 @@ typedef struct ExpectReturnValue {
 
 #define EXPECT(expected, expected_string, current_token, current_length, end)  \
     expected =                                                                 \
-        lex_expect(expected_string, &current_token, &current_length, end);     \
+        lex_expect(expected_string, current_token, current_length, end);     \
     if (expected.err.type) {                                                   \
         return expected.err;                                                   \
     }                                                                          \

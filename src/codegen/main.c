@@ -263,23 +263,8 @@ Error codegen_expression_x86_64_mswin(ParsingContext *context,
     case NODE_TYPE_VARIABLE_DECLARATION:
         if (!cg_context->parent) {
             int rd = register_allocate(r);
-            if (expression->children->next_child->type == NODE_TYPE_NULL) {
-                LINE("lea %s, %s",
-                     symbol_to_addr(cg_context, expression->children),
-                     register_name(r, rd));
-                LINE("movq $0, (%s)", register_name(r, rd));
-            } else {
-                LINE("lea %s, %s",
-                     symbol_to_addr(cg_context, expression->children),
-                     register_name(r, rd));
-                codegen_expression_x86_64_mswin(
-                    context, next_child, cg_context, r,
-                    expression->children->next_child, outfile);
-                LINE("mov %s, %s",
-                     register_name(
-                         r, expression->children->next_child->result_register),
-                     symbol_to_addr(cg_context, expression->children));
-            }
+            LINE("lea %s, %s", symbol_to_addr(cg_context, expression->children),
+                 register_name(r, rd));
             register_deallocate(r, rd);
             break;
         }
@@ -297,13 +282,6 @@ Error codegen_expression_x86_64_mswin(ParsingContext *context,
         LINE("sub $%lld, %%rsp", vessel_1->children->value.MZ_integer);
         environment_set(cg_context->locals, expression->children,
                         node_integer(cg_context->locals_offset));
-
-        if (expression->children->next_child->type == NODE_TYPE_INTEGER) {
-            LINE("movq $%lld, %lld(%%rbp)",
-                 expression->children->next_child->value.MZ_integer,
-                 cg_context->locals_offset);
-        }
-
         cg_context->locals_offset -= vessel_1->children->value.MZ_integer;
 
         break;
@@ -326,30 +304,25 @@ Error codegen_expression_x86_64_mswin(ParsingContext *context,
         }
         break;
     case NODE_TYPE_VARIABLE_REASSIGNMENT:
-        if (cg_context->parent) {
-            LINE("movq $%lld, %s",
-                 expression->children->next_child->value.MZ_integer,
-                 symbol_to_addr(cg_context, expression->children));
+
+        if (expression->children->next_child->type == NODE_TYPE_INTEGER) {
+            BYTES("movq $");
+            write_integer(expression->children->next_child->value.MZ_integer,
+                          outfile);
+            LINE(", %s", symbol_to_addr(cg_context, expression->children));
         } else {
-            if (expression->children->next_child->type == NODE_TYPE_INTEGER) {
-                BYTES("movq $");
-                write_integer(
-                    expression->children->next_child->value.MZ_integer,
-                    outfile);
-                LINE(", %s", symbol_to_addr(cg_context, expression->children));
-            } else {
-                err = codegen_expression_x86_64_mswin(
-                    context, next_child, cg_context, r,
-                    expression->children->next_child, outfile);
-                ret;
-                char *result_register = register_name(
-                    r, expression->children->next_child->result_register);
-                LINE("mov %s, %s", result_register,
-                     symbol_to_addr(cg_context, expression->children));
-                register_deallocate(
-                    r, expression->children->next_child->result_register);
-            }
+            err = codegen_expression_x86_64_mswin(
+                context, next_child, cg_context, r,
+                expression->children->next_child, outfile);
+            ret;
+            char *result_register = register_name(
+                r, expression->children->next_child->result_register);
+            LINE("mov %s, %s", result_register,
+                 symbol_to_addr(cg_context, expression->children));
+            register_deallocate(
+                r, expression->children->next_child->result_register);
         }
+
         break;
 
     default:

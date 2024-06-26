@@ -199,6 +199,166 @@ Error parse_binary_infix_operator(ParsingContext *context, int *found,
     return OK;
 }
 
+enum StackOperatorReturnValue {
+    STACK_HANDLED_INVALID = 0,
+    STACK_HANDLED_BREAK = 1,
+    STACK_HANDLED_PARSE = 2,
+    STACK_HANDLED_CHECK = 3
+};
+
+Error handle_stack_operator(int *status, ParsingContext **context,
+                            ParsingStack **stack, Node **working_result,
+                            Node *result, long long *working_precedence,
+                            Token *current_token, size_t *token_length,
+                            char **end) {
+    Error err = OK;
+    ExpectReturnValue expected;
+    memset(&expected, 0, sizeof(ExpectReturnValue));
+
+    Node *operator=(*stack)->operator;
+
+    if (!operator|| operator->type != NODE_TYPE_SYMBOL) {
+        ERROR_PREP(err, ERROR_TYPE,
+                   "Parsing context operator must be symbol. Likely "
+                   "internal error :(");
+        return err;
+    }
+
+    if (strcmp(operator->value.symbol, "if-body") == 0) {
+        EXPECT(expected, "}", current_token, token_length, end);
+        if (expected.found) {
+            *context = (*context)->parent;
+            *stack = (*stack)->parent;
+            *status = STACK_HANDLED_CHECK;
+            return OK;
+        }
+        (*stack)->result->next_child = node_allocate();
+        *working_result = (*stack)->result->next_child;
+        (*stack)->result = *working_result;
+        *status = STACK_HANDLED_PARSE;
+        return OK;
+    }
+
+    if (strcmp(operator->value.symbol, "if-condition") == 0) {
+        EXPECT(expected, "{", current_token, token_length, end);
+        if (expected.found) {
+            *working_result = (*stack)->result;
+            *stack = (*stack)->parent;
+            Node *if_body = node_allocate();
+            if_body->type = NODE_TYPE_PROGRAM;
+            Node *first_expr = node_allocate();
+            node_add_child(if_body, first_expr);
+            node_add_child(*working_result, if_body);
+
+            EXPECT(expected, "}", current_token, token_length, end);
+            if (expected.found) {
+                *status = STACK_HANDLED_CHECK;
+                *context = parse_context_create(*context);
+                *context = (*context)->parent;
+                return OK;
+            }
+
+            *stack = parse_stack_create(*stack);
+            (*stack)->operator= node_symbol("if-body");
+            (*stack)->result = if_body;
+            *context = parse_context_create(*context);
+            *working_result = first_expr;
+            (*stack)->result = *working_result;
+            *status = STACK_HANDLED_PARSE;
+            return OK;
+        } else {
+            ERROR_PREP(err, ERROR_GENERIC, "If requires a body");
+            ret;
+        }
+    }
+
+    if (strcmp(operator->value.symbol, "lambda") == 0) {
+        // Evaluate next expression unless it's a closing brace.
+        EXPECT(expected, "}", current_token, token_length, end);
+        if (expected.done || expected.found) {
+            EXPECT(expected, "]", current_token, token_length, end);
+            if (expected.done || expected.found) {
+                *context = (*context)->parent;
+                *stack = (*stack)->parent;
+                *status = STACK_HANDLED_CHECK;
+                return OK;
+
+            } else {
+                ERROR_PREP(err, ERROR_SYNTAX,
+                           "Expected closing square bracket for following "
+                           "lambda body definition");
+                return err;
+            }
+        }
+
+        (*stack)->result->next_child = node_allocate();
+        *working_result = (*stack)->result->next_child;
+        (*stack)->result = *working_result;
+        *status = STACK_HANDLED_PARSE;
+        return OK;
+    }
+    if (strcmp(operator->value.symbol, "fn") == 0) {
+        // Evaluate next expression unless it's a closing brace.
+        EXPECT(expected, "}", current_token, token_length, end);
+        if (expected.done || expected.found) {
+            (*context) = (*context)->parent;
+            (*stack) = (*stack)->parent;
+            if (!stack || !(*stack)) {
+                *status = STACK_HANDLED_BREAK;
+            } else {
+                *status = STACK_HANDLED_CHECK;
+            }
+            return OK;
+        }
+
+        (*stack)->result->next_child = node_allocate();
+        (*working_result) = (*stack)->result->next_child;
+        (*stack)->result = (*working_result);
+        *status = STACK_HANDLED_PARSE;
+        return OK;
+    }
+    if (strcmp(operator->value.symbol, "fncall") == 0) {
+        EXPECT(expected, ")", current_token, token_length, end);
+        if (expected.done || expected.found) {
+
+            print_node(result, 0);
+            (*stack) = (*stack)->parent;
+
+
+            int found = 0;
+            err = parse_binary_infix_operator(
+                *context, &found, current_token, token_length, end,
+                working_precedence, result, working_result);
+            if (found) {
+                *status = STACK_HANDLED_PARSE;
+            } else {
+                *status = STACK_HANDLED_CHECK;
+            }
+            return OK;
+        }
+
+        // FIXME?: Should comma be optional?(*
+        EXPECT(expected, ",", current_token, token_length, end);
+        if (expected.done || !expected.found) {
+            print_token(*current_token);
+            ERROR_PREP(err, ERROR_SYNTAX,
+                       "Parameter list expected closing parenthesis or "
+                       "comma for another parameter");
+            return err;
+        }
+
+        (*stack)->result->next_child = node_allocate();
+        *working_result = (*stack)->result->next_child;
+        (*stack)->result = *working_result;
+        *status = STACK_HANDLED_PARSE;
+        return OK;
+    }
+    *status = STACK_HANDLED_INVALID;
+    ERROR_PREP(err, ERROR_GENERIC,
+               "Internal error: Could not handle stack operator!");
+    return err;
+}
+
 Error parse_expr(ParsingContext *context, char *source, char **end,
                  Node *result) {
     ParsingStack *stack = NULL;
@@ -269,7 +429,7 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
                 // TODO: Ensure function return type is a valid type.
 
                 // Parameter list
-                EXPECT(expected, "(", current_token, token_length, end);
+                EXPECT(expected, "(", &current_token, &token_length, end);
                 if (!expected.found || expected.done) {
                     ERROR_PREP(
                         err, ERROR_SYNTAX,
@@ -284,7 +444,7 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
                 // the next expression, then ensure return value is var. decl.
                 // in stack handling below?
                 for (;;) {
-                    EXPECT(expected, ")", current_token, token_length, end);
+                    EXPECT(expected, ")", &current_token, &token_length, end);
                     if (expected.found) {
                         break;
                     }
@@ -302,7 +462,7 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
                     Node *parameter_name = node_symbol_from_buffer(
                         current_token.beginning, token_length);
 
-                    EXPECT(expected, ":", current_token, token_length, end);
+                    EXPECT(expected, ":", &current_token, &token_length, end);
                     if (expected.done || !expected.found) {
                         ERROR_PREP(
                             err, ERROR_SYNTAX,
@@ -321,12 +481,12 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
 
                     node_add_child(parameter_list, parameter);
 
-                    EXPECT(expected, ",", current_token, token_length, end);
+                    EXPECT(expected, ",", &current_token, &token_length, end);
                     if (expected.found) {
                         continue;
                     }
 
-                    EXPECT(expected, ")", current_token, token_length, end);
+                    EXPECT(expected, ")", &current_token, &token_length, end);
                     if (!expected.found) {
                         ERROR_PREP(err, ERROR_SYNTAX,
                                    "Expected closing parenthesis following "
@@ -342,7 +502,7 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
                 // working_result);
 
                 // Parse function body.
-                EXPECT(expected, "{", current_token, token_length, end);
+                EXPECT(expected, "{", &current_token, &token_length, end);
                 if (expected.done || !expected.found) {
                     ERROR_PREP(err, ERROR_SYNTAX,
                                "Function definition requires body following "
@@ -350,10 +510,13 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
                     return err;
                 }
 
-                EXPECT(expected, "}", current_token, token_length, end);
+                EXPECT(expected, "}", &current_token, &token_length, end);
                 if (expected.found) {
-                    ERROR_PREP(err, ERROR_SYNTAX, "Function has no body !!!");
-                    return err;
+                    EXPECT(expected, "]", &current_token, &token_length, end);
+                    if (expected.found) {
+                        ERROR_PREP(err, ERROR_SYNTAX, "Lambda has no body !!!");
+                        return err;
+                    }
                 }
 
                 context = parse_context_create(context);
@@ -402,7 +565,7 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
                 Node *function_name = node_symbol_from_buffer(
                     current_token.beginning, token_length);
 
-                EXPECT(expected, "(", current_token, token_length, end);
+                EXPECT(expected, "(", &current_token, &token_length, end);
                 if (!expected.found) {
                     printf("Function Name: \"%s\"\n",
                            function_name->value.symbol);
@@ -416,18 +579,18 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
                 parameter_list->type = NODE_TYPE_FUNCTION_PARAMS_LIST;
                 node_add_child(working_result, parameter_list);
 
-                // FIXME?: Should we possibly create a parser stack and evaluate
-                // the next expression, then ensure return value is var. decl.
-                // in stack handling below?
+                // FIXME?: Should we possibly create a parser stack and
+                // evaluate the next expression, then ensure return value is
+                // var. decl. in stack handling below?
                 for (;;) {
-                    EXPECT(expected, ")", current_token, token_length, end);
+                    EXPECT(expected, ")", &current_token, &token_length, end);
                     if (expected.found) {
                         break;
                     }
                     if (expected.done) {
-                        ERROR_PREP(
-                            err, ERROR_SYNTAX,
-                            "Expected closing parenthesis for parameter list");
+                        ERROR_PREP(err, ERROR_SYNTAX,
+                                   "Expected closing parenthesis for "
+                                   "parameter list");
                         return err;
                     }
 
@@ -438,11 +601,11 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
                     Node *parameter_name = node_symbol_from_buffer(
                         current_token.beginning, token_length);
 
-                    EXPECT(expected, ":", current_token, token_length, end);
+                    EXPECT(expected, ":", &current_token, &token_length, end);
                     if (expected.done || !expected.found) {
-                        ERROR_PREP(
-                            err, ERROR_SYNTAX,
-                            "Parameter declaration requires a type annotation");
+                        ERROR_PREP(err, ERROR_SYNTAX,
+                                   "Parameter declaration requires a type "
+                                   "annotation");
                         return err;
                     }
 
@@ -457,12 +620,12 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
 
                     node_add_child(parameter_list, parameter);
 
-                    EXPECT(expected, ",", current_token, token_length, end);
+                    EXPECT(expected, ",", &current_token, &token_length, end);
                     if (expected.found) {
                         continue;
                     }
 
-                    EXPECT(expected, ")", current_token, token_length, end);
+                    EXPECT(expected, ")", &current_token, &token_length, end);
                     if (!expected.found) {
                         ERROR_PREP(err, ERROR_SYNTAX,
                                    "Expected closing parenthesis following "
@@ -473,7 +636,7 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
                 }
 
                 // Parse return type.
-                EXPECT(expected, ":", current_token, token_length, end);
+                EXPECT(expected, ":", &current_token, &token_length, end);
                 // TODO/FIXME: Should we allow implicit return type?
                 if (expected.done || !expected.found) {
                     ERROR_PREP(err, ERROR_SYNTAX,
@@ -495,14 +658,14 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
                                 working_result);
 
                 // Parse function body.
-                EXPECT(expected, "{", current_token, token_length, end);
+                EXPECT(expected, "{", &current_token, &token_length, end);
                 if (expected.done || !expected.found) {
                     ERROR_PREP(err, ERROR_SYNTAX,
                                "Function definition requires body following "
                                "return type");
                     return err;
                 }
-                EXPECT(expected, "}", current_token, token_length, end);
+                EXPECT(expected, "}", &current_token, &token_length, end);
                 if (expected.found) {
                     working_result = result;
                     ERROR_PREP(err, ERROR_SYNTAX, "Function has no body !!!");
@@ -534,7 +697,7 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
             // attempt to pattern match variable access, assignment,
             // declaration, or declaration with initialization.
 
-            EXPECT(expected, "=", current_token, token_length, end);
+            EXPECT(expected, "=", &current_token, &token_length, end);
             if (expected.found) {
                 Node *variable_binding = node_allocate();
 
@@ -570,11 +733,11 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
                 continue;
             }
 
-            EXPECT(expected, ":", current_token, token_length, end);
+            EXPECT(expected, ":", &current_token, &token_length, end);
             if (!expected.done && expected.found) {
 
                 // Re-assignment of existing variable (look for =)
-                EXPECT(expected, "=", current_token, token_length, end);
+                EXPECT(expected, "=", &current_token, &token_length, end);
                 if (expected.found) {
                     Node *variable_binding = node_allocate();
 
@@ -590,7 +753,8 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
                     if (!environment_get(*context_it->variables, symbol,
                                          variable_binding)) {
 
-                        // TODO: Add source location or something to the error.
+                        // TODO: Add source location or something to the
+                        // error.
                         // TODO: Create new error type.
                         printf("ID of undeclared variable: \"%s\"\n",
                                symbol->value.symbol);
@@ -645,9 +809,8 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
                 }
                 free(variable_binding);
                 working_result->type = NODE_TYPE_VARIABLE_DECLARATION;
-                Node *value_expression = node_none();
                 node_add_child(working_result, symbol);
-                node_add_child(working_result, value_expression);
+
                 Node *symbol_for_env = node_allocate();
                 node_copy(symbol, symbol_for_env);
                 int status = environment_set(context->variables, symbol_for_env,
@@ -660,14 +823,30 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
                     return err;
                 }
 
-                EXPECT(expected, "=", current_token, token_length, end);
+                EXPECT(expected, "=", &current_token, &token_length, end);
                 if (expected.found) {
-                    working_result = value_expression;
+                    working_result->next_child = node_allocate();
+
+                    Node **local = &result;
+                    if (stack) {
+                        local = &stack->result;
+                    }
+                    Node *reassign = node_allocate();
+                    reassign->type = NODE_TYPE_VARIABLE_REASSIGNMENT;
+                    log_message("We hit here");
+                    Node *value = node_allocate();
+                    node_add_child(reassign, node_symbol(symbol->value.symbol));
+                    node_add_child(reassign, value);
+
+                    (*local)->next_child = reassign;
+                    *local = reassign;
+                    working_result = value;
+
                     continue;
                 }
 
             } else {
-                EXPECT(expected, "(", current_token, token_length, end);
+                EXPECT(expected, "(", &current_token, &token_length, end);
                 if (!expected.done && expected.found) {
                     working_result->type = NODE_TYPE_FUNCTION_CALL;
                     node_add_child(working_result, symbol);
@@ -678,15 +857,10 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
                     node_add_child(working_result, argument_list);
                     working_result = first_argument;
 
-                    EXPECT(expected, ")", current_token, token_length, end);
-                    if (!expected.done && expected.found) {
-                        // working_result = node_allocate();
-                    } else {
-                        stack = parse_stack_create(stack);
-                        stack->operator= node_symbol("fncall");
-                        stack->result = working_result;
-                        continue;
-                    }
+                    stack = parse_stack_create(stack);
+                    stack->operator= node_symbol("fncall");
+                    stack->result = working_result;
+                    continue;
                 }
 
                 ParsingContext *context_it = context;
@@ -733,129 +907,33 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
         if (!stack) {
             break;
         }
-        // Otherwise, handle parser stack operator.
 
-        Node *operator= stack->operator;
-        if (!operator|| operator->type != NODE_TYPE_SYMBOL) {
-            ERROR_PREP(err, ERROR_TYPE,
-                       "Parsing context operator must be symbol. Likely "
-                       "internal error :(");
-            return err;
-        }
-
-        if (strcmp(operator->value.symbol, "if-body") == 0) {
-            EXPECT(expected, "}", current_token, token_length, end);
-            if (expected.found) {
-                context = context->parent;
-                stack = stack->parent;
-                if (!stack) {
-                    break;
-                }
-            } else {
-                ERROR_PREP(err, ERROR_GENERIC, "If requires a body");
-                ret;
-            }
-            stack->result->next_child = node_allocate();
-            working_result = stack->result->next_child;
-            stack->result = working_result;
-            continue;
-        }
-
-        if (strcmp(operator->value.symbol, "if-condition") == 0) {
-            EXPECT(expected, "{", current_token, token_length, end);
-            if (expected.found) {
-                working_result = stack->result;
-                stack = stack->parent;
-                Node *if_body = node_allocate();
-                if_body->type = NODE_TYPE_PROGRAM;
-                stack = parse_stack_create(stack);
-                stack->operator= node_symbol("if-body");
-                stack->result = if_body;
-                context = parse_context_create(context);
-                Node *first_expr = node_allocate();
-                node_add_child(if_body, first_expr);
-                node_add_child(working_result, if_body);
-                working_result = first_expr;
-                stack->result = working_result;
-                continue;
-            } else {
-                ERROR_PREP(err, ERROR_GENERIC, "If requires a body");
-                ret;
-            }
-        }
-
-        if (strcmp(operator->value.symbol, "lambda") == 0) {
-            // Evaluate next expression unless it's a closing brace.
-            EXPECT(expected, "}", current_token, token_length, end);
-            if (expected.done || expected.found) {
-                EXPECT(expected, "]", current_token, token_length, end);
-                if (expected.done || expected.found) {
-                    context = context->parent;
-                    stack = stack->parent;
-                    if (!stack) {
-                        break;
-                    }
-                } else {
-                    ERROR_PREP(err, ERROR_SYNTAX,
-                               "Expected closing square bracket for following "
-                               "lambda body definition");
-                    return err;
-                }
-            }
-
-            stack->result->next_child = node_allocate();
-            working_result = stack->result->next_child;
-            stack->result = working_result;
-            continue;
-        }
-        if (strcmp(operator->value.symbol, "fn") == 0) {
-            // Evaluate next expression unless it's a closing brace.
-            EXPECT(expected, "}", current_token, token_length, end);
-            if (expected.done || expected.found) {
-                context = context->parent;
-                stack = stack->parent;
-                if (!stack) {
-                    break;
-                }
-            }
-
-            stack->result->next_child = node_allocate();
-            working_result = stack->result->next_child;
-            stack->result = working_result;
-            continue;
-        }
-        if (strcmp(operator->value.symbol, "fncall") == 0) {
-            EXPECT(expected, ")", current_token, token_length, end);
-            if (expected.done || expected.found) {
-
-                stack = stack->parent;
-
-                int found = 0;
-                err = parse_binary_infix_operator(
-                    context, &found, &current_token, &token_length, end,
-                    &working_precedence, result, &working_result);
-                if (found) {
-                    continue;
-                }
-                break;
-            }
-
-            // FIXME?: Should comma be optional?
-            EXPECT(expected, ",", current_token, token_length, end);
-            if (expected.done || !expected.found) {
-                print_token(current_token);
-                ERROR_PREP(err, ERROR_SYNTAX,
-                           "Parameter list expected closing parenthesis or "
-                           "comma for another parameter");
+        int status = 1;
+        do {
+            err = handle_stack_operator(
+                &status, &context, &stack, &working_result, result,
+                &working_precedence, &current_token, &token_length, end);
+            if (err.type) {
                 return err;
             }
+        } while (status == STACK_HANDLED_CHECK && stack);
 
-            stack->result->next_child = node_allocate();
-            working_result = stack->result->next_child;
-            stack->result = working_result;
+        if (!stack) {
+            break;
+        }
 
+        if (status == STACK_HANDLED_BREAK) {
+            break;
+        }
+        if (status == STACK_HANDLED_PARSE) {
             continue;
         }
+        printf("status: %d\n", status);
+        ERROR_PREP(
+            err, ERROR_GENERIC,
+            "Internal Compiler Error :(. Unhandled parse stack operator.");
+        return err;
+        // Otherwise, handle parser stack operator.
     }
 
     return err;

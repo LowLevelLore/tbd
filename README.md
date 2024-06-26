@@ -160,6 +160,8 @@ To compile any file written in "tbd" language, following steps need to be follow
   - [x] Parsing
   - [ ] Codegen
 
+TODO: Binary operators dont work well with function calls, check that
+
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 

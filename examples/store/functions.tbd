@@ -12,7 +12,7 @@ l1 : fn = [integer (i:integer){
     i
 }]
 
-foo(2) + 4
+i: integer = foo(3)
 
-c:integer = 10
+c:integer = 10 + 2
 c
