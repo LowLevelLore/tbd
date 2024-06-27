@@ -169,6 +169,8 @@ Error codegen_expression_x86_64_mswin(ParsingContext *context,
             last_expr = vessel_0;
             vessel_0 = vessel_0->next_child;
         }
+        register_deallocate(r, last_expr->result_register);
+        expression->result_register = last_expr->result_register;
         LINE("%s:", otherwise_label);
 
         break;
@@ -201,6 +203,8 @@ Error codegen_expression_x86_64_mswin(ParsingContext *context,
         LINE("call MZ_fn_%s", expression->children->value.symbol);
         // Assumes all arguments integers
         LINE("add $%lld, %%rsp", offset);
+        // expression->result_register = register_allocate(r);
+        // LINE("mov %%rax, %s", register_name(r, expression->result_register));
 
         break;
     case NODE_TYPE_INTEGER:
@@ -263,15 +267,17 @@ Error codegen_expression_x86_64_mswin(ParsingContext *context,
         } else if (strcmp(expression->value.symbol, "/") == 0) {
         } else if (strcmp(expression->value.symbol, "=") == 0) {
             expression->result_register = register_allocate(r);
-
+            RegisterDescriptor true_val = register_allocate(r);
             LINE("mov $0, %s", register_name(r, expression->result_register));
-            LINE("test %s, %s",
+            LINE("cmp %s, %s",
                  register_name(r, expression->children->result_register),
                  register_name(
                      r, expression->children->next_child->result_register));
-            LINE("mov $1, %%r8");
-            LINE("cmov %%r8, %s", register_name(r, expression->result_register));
+            LINE("mov $1, %s", register_name(r, true_val));
+            LINE("cmove %s, %s", register_name(r, true_val),
+                 register_name(r, expression->result_register));
 
+            register_deallocate(r, true_val);
             register_deallocate(r, expression->children->result_register);
             register_deallocate(
                 r, expression->children->next_child->result_register);
@@ -430,6 +436,11 @@ Error codegen_function_x86_64_att_mswin(ParsingContext *context,
     LINE("MZ_fn_%s:", name);
 
     codegen_header_x86_64_att_mswin(outfile);
+
+    LINE("push %%rbx");
+    LINE("push %%rsi");
+    LINE("push %%rdi");
+
     ParsingContext *ctx = next_child ? *next_child : context;
     Node *expression = function->children->next_child->next_child->children;
     while (expression) {
@@ -447,6 +458,9 @@ Error codegen_function_x86_64_att_mswin(ParsingContext *context,
     if (next_child)
         *next_child = (*next_child)->next_child;
     LINE(" ");
+    LINE("pop %%rdi");
+    LINE("pop %%rsi");
+    LINE("pop %%rbx");
     LINE("add $%lld, %%rsp", -cg_context->locals_offset);
     codegen_footer_x86_64_att_mswin(outfile, false);
 
@@ -463,6 +477,9 @@ Error codegen_program_x86_64_mswin(ParsingContext *context,
     Register *r = register_create("%rax");
     register_add(r, "%r10");
     register_add(r, "%r11");
+    register_add(r, "%rbx");
+    register_add(r, "%rdi");
+    register_add(r, "%rsi");
 
     LINE(";#; This assembly was generated for x86_64 Windows by the MZ "
          "Compiler");

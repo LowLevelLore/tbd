@@ -17,3 +17,5 @@
 22 June 2024, Working on Codegen [Now we add binary operations], Video : 14, Timeline : 02:20:41
 24 June 2024, Needed a break, parser is trash [Codegen function calls], Video : 15, Timeline : 02:30:41 [Video 16 done BTW]
 25 June 2024, Worked on if conditional, Video : 17, Timeline : 01:00:41
+26 June 2024, Worked on if conditional [Codegenning !!OUT OF REGISTERS!!], Video : 17, Timeline : 04:00:41
+27 June 2024, I'm definitely not mad [Silly using test in place of cmp], Video : 17, Timeline : 05:00:41

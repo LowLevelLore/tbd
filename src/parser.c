@@ -686,7 +686,7 @@ Error parse_expr(ParsingContext *context, char *source, char **end,
                 }
 
                 // Parse return type.
-                EXPECT(expected, ":", &current_token, &token_length, end);
+                EXPECT(expected, "->", &current_token, &token_length, end);
                 // TODO/FIXME: Should we allow implicit return type?
                 if (expected.done || !expected.found) {
                     ERROR_PREP(err, ERROR_SYNTAX,

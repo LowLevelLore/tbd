@@ -1,5 +1,13 @@
-a : integer = 2
-
-if a - 2 = 0 {
-    pint a
+fn foo(b: integer, a: integer) -> integer {
+    if a {
+        pint a
+        if b = 3 {
+            pint 69
+        }
+    }
 }
+
+foo(0, 3)
+foo(1, 3)
+foo(2, 3)
+foo(1, 4)
