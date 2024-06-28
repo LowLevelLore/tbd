@@ -56,7 +56,7 @@ typedef enum NodeType {
     */
     NODE_TYPE_IF,
     NODE_TYPE_CONDITION,
-    NODE_TYPE_ELSE,
+    NODE_TYPE_ELSE, // Do we really need this ?
     NODE_TYPE_FUNCTION_CALL,
     NODE_TYPE_FUNCTION_ARGS_LIST,
 } NodeType;

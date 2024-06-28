@@ -77,7 +77,9 @@ ParsingContext *parse_context_default_create() {
                             node_symbol("integer"), sizeof(long long));
     err = define_type(ctx->types, NODE_TYPE_FUNCTION_DECLARATION,
                       node_symbol("fn"), sizeof(long long));
-    define_binary_operator(ctx, "=", 5, "integer", "integer", "integer");
+    define_binary_operator(ctx, "=", 2, "integer", "integer", "integer");
+    define_binary_operator(ctx, "<", 2, "integer", "integer", "integer");
+    define_binary_operator(ctx, ">", 2, "integer", "integer", "integer");
     define_binary_operator(ctx, "+", 5, "integer", "integer", "integer");
     define_binary_operator(ctx, "-", 5, "integer", "integer", "integer");
     define_binary_operator(ctx, "*", 10, "integer", "integer", "integer");
@@ -290,6 +292,8 @@ Error handle_stack_operator(int *status, ParsingContext **context,
                 EXPECT(expected, "{", current, length, end);
                 if (expected.found) {
                     Node *if_else_body = node_allocate();
+                    if_else_body->type = NODE_TYPE_PROGRAM;
+
                     Node *if_else_first_expr = node_allocate();
                     node_add_child(if_else_body, if_else_first_expr);
 
@@ -382,13 +386,18 @@ Error handle_stack_operator(int *status, ParsingContext **context,
     if (strcmp(operator->value.symbol, "fncall") == 0) {
         EXPECT(expected, ")", current, length, end);
         if (expected.done || expected.found) {
-
             *stack = (*stack)->parent;
+
+            Node **passed = working_result;
+            // if ((*stack) && (*stack)->result){
+            //     print_node((*stack)->result, 0);
+            //     passed = &(*stack)->result;
+            // }
 
             int found = 0;
             err = parse_binary_infix_operator(*context, *stack, &found, current,
                                               length, end, working_precedence,
-                                              result, working_result);
+                                              result, passed);
             if (found) {
                 *status = STACK_HANDLED_PARSE;
             } else {

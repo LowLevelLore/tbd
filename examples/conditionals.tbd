@@ -1,13 +1,13 @@
-fn foo(b: integer, a: integer) -> integer {
-    if a {
-        pint a
-        if b = 3 {
-            pint 69
-        }
+fn fact(n:integer) -> integer {
+    a : integer
+    if n < 2 { 
+        a := 1
     }
+    else {
+        a := n*fact(n - 1)
+    }
+    a
 }
 
-foo(0, 3)
-foo(1, 3)
-foo(2, 3)
-foo(1, 4)
+k : integer = fact(4)
+pint k

@@ -1,6 +1,8 @@
 #include "../headers/codegen/main.h"
 #include "registers.c"
 
+static const int VERBOSITY = 1;
+
 //======================MZ_CODEGEN_UTILS BEGINS======================
 void write_bytes(char *code, FILE *outfile) {
     if (!outfile || !code) {
@@ -146,11 +148,16 @@ Error codegen_expression_x86_64_mswin(ParsingContext *context,
     char *buffer = (char *)malloc(256 * sizeof(char));
     switch (expression->type) {
     case NODE_TYPE_IF:
+        print_node(expression, 4);
+        if (VERBOSITY) {
+            LINE(";#; IF");
+        }
         err =
             codegen_expression_x86_64_mswin(og_context, next_child, cg_context,
                                             r, expression->children, outfile);
         ret;
         char *otherwise_label = label_generate();
+        char *after_otherwise_label = label_generate();
         char *condition_register_name =
             register_name(r, expression->children->result_register);
         LINE("test %s, %s", condition_register_name, condition_register_name);
@@ -171,12 +178,35 @@ Error codegen_expression_x86_64_mswin(ParsingContext *context,
         }
         register_deallocate(r, last_expr->result_register);
         expression->result_register = last_expr->result_register;
+        LINE("jmp %s", after_otherwise_label);
         LINE("%s:", otherwise_label);
+
+        if (expression->children->next_child->next_child) {
+            last_expr = NULL;
+            vessel_0 = expression->children->next_child->next_child->children;
+            while (vessel_0) {
+                err = codegen_expression_x86_64_mswin(
+                    context, next_child, cg_context, r, vessel_0, outfile);
+                ret;
+                if (last_expr) {
+                    register_deallocate(r, last_expr->result_register);
+                }
+                last_expr = vessel_0;
+                vessel_0 = vessel_0->next_child;
+            }
+            register_deallocate(r, last_expr->result_register);
+        }
+
+        LINE("%s:", after_otherwise_label);
 
         break;
     case NODE_TYPE_FUNCTION_CALL:
+        if (VERBOSITY) {
+            LINE(";#; FUNCTION CALL : `%s`",
+                 expression->children->value.symbol);
+        }
         // TODO: Push the arguments in reverse order
-
+        LINE("push %%rax");
         long long offset = 0;
         vessel_0 = expression->children->next_child->children;
         while (vessel_0) {
@@ -196,6 +226,8 @@ Error codegen_expression_x86_64_mswin(ParsingContext *context,
                 }
                 parse_get_type(context, vessel_1, vessel_2);
                 offset += vessel_2->children->value.MZ_integer;
+            } else {
+                offset += 8;
             }
             vessel_0 = vessel_0->next_child;
         }
@@ -203,16 +235,28 @@ Error codegen_expression_x86_64_mswin(ParsingContext *context,
         LINE("call MZ_fn_%s", expression->children->value.symbol);
         // Assumes all arguments integers
         LINE("add $%lld, %%rsp", offset);
-        // expression->result_register = register_allocate(r);
-        // LINE("mov %%rax, %s", register_name(r, expression->result_register));
-
+        expression->result_register = register_allocate(r);
+        if (strcmp(register_name(r, expression->result_register), "%rax") !=
+            0) {
+            LINE("mov %%rax, %s",
+                 register_name(r, expression->result_register));
+            LINE("pop %%rax");
+        } else {
+            LINE("add $8, %%rsp");
+        }
         break;
     case NODE_TYPE_INTEGER:
+        if (VERBOSITY) {
+            LINE(";#; INTEGER : `%lld`", expression->value.MZ_integer);
+        }
         expression->result_register = register_allocate(r);
         LINE("mov $%lld, %s", expression->value.MZ_integer,
              register_name(r, expression->result_register));
         break;
     case NODE_TYPE_BINARY_OPERATOR:
+        if (VERBOSITY) {
+            LINE(";#; BINARY OPERATOR : `%s`", expression->value.symbol);
+        }
         Node *result = node_allocate();
         while (context->parent) {
             context = context->parent;
@@ -281,6 +325,38 @@ Error codegen_expression_x86_64_mswin(ParsingContext *context,
             register_deallocate(r, expression->children->result_register);
             register_deallocate(
                 r, expression->children->next_child->result_register);
+        } else if (strcmp(expression->value.symbol, "<") == 0) {
+            expression->result_register = register_allocate(r);
+            RegisterDescriptor true_val = register_allocate(r);
+            LINE("mov $0, %s", register_name(r, expression->result_register));
+            LINE("cmp %s, %s",
+                 register_name(
+                     r, expression->children->next_child->result_register),
+                 register_name(r, expression->children->result_register));
+            LINE("mov $1, %s", register_name(r, true_val));
+            LINE("cmovl %s, %s", register_name(r, true_val),
+                 register_name(r, expression->result_register));
+
+            register_deallocate(r, true_val);
+            register_deallocate(r, expression->children->result_register);
+            register_deallocate(
+                r, expression->children->next_child->result_register);
+        } else if (strcmp(expression->value.symbol, ">") == 0) {
+            expression->result_register = register_allocate(r);
+            RegisterDescriptor true_val = register_allocate(r);
+            LINE("mov $0, %s", register_name(r, expression->result_register));
+            LINE("cmp %s, %s",
+                 register_name(
+                     r, expression->children->next_child->result_register),
+                 register_name(r, expression->children->result_register));
+            LINE("mov $1, %s", register_name(r, true_val));
+            LINE("cmovg %s, %s", register_name(r, true_val),
+                 register_name(r, expression->result_register));
+
+            register_deallocate(r, true_val);
+            register_deallocate(r, expression->children->result_register);
+            register_deallocate(
+                r, expression->children->next_child->result_register);
         }
 
         else {
@@ -294,13 +370,15 @@ Error codegen_expression_x86_64_mswin(ParsingContext *context,
         if (!cg_context->parent) {
             break;
         }
-
         buffer = label_generate();
         err = codegen_function_x86_64_att_mswin(
             context, &next_child, cg_context, r, buffer, expression, outfile);
         ret;
         break;
     case NODE_TYPE_DEBUG_PRINT_INTEGER:
+        if (VERBOSITY) {
+            LINE(";#; DEBUG PRINT INTEGER");
+        }
         err = codegen_expression_x86_64_mswin(context, next_child, cg_context,
                                               r, expression->children, outfile);
         LINE("mov %s, %%rdx",
@@ -312,6 +390,10 @@ Error codegen_expression_x86_64_mswin(ParsingContext *context,
 
         break;
     case NODE_TYPE_VARIABLE_DECLARATION:
+        if (VERBOSITY) {
+            LINE(";#; VARIABLE DECLARATION : `%s`",
+                 expression->children->value.symbol);
+        }
         if (!cg_context->parent) {
             int rd = register_allocate(r);
             LINE("lea %s, %s", symbol_to_addr(cg_context, expression->children),
@@ -337,6 +419,10 @@ Error codegen_expression_x86_64_mswin(ParsingContext *context,
 
         break;
     case NODE_TYPE_VARIABLE_ACCESS:
+        if (VERBOSITY) {
+            LINE(";#; VARIABLE ACCESS : `%s`",
+                 expression->children->value.symbol);
+        }
         if (!context->parent) {
             expression->result_register = register_allocate(r);
             LINE("mov %s(%%rip), %s", expression->children->value.symbol,
@@ -355,7 +441,10 @@ Error codegen_expression_x86_64_mswin(ParsingContext *context,
         }
         break;
     case NODE_TYPE_VARIABLE_REASSIGNMENT:
-
+        if (VERBOSITY) {
+            LINE(";#; VARIABLE REASSIGNMENT : `%s`",
+                 expression->children->value.symbol);
+        }
         if (expression->children->next_child->type == NODE_TYPE_INTEGER) {
             BYTES("movq $");
             write_integer(expression->children->next_child->value.MZ_integer,
