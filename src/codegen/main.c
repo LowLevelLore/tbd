@@ -148,7 +148,6 @@ Error codegen_expression_x86_64_mswin(ParsingContext *context,
     char *buffer = (char *)malloc(256 * sizeof(char));
     switch (expression->type) {
     case NODE_TYPE_IF:
-        print_node(expression, 4);
         if (VERBOSITY) {
             LINE(";#; IF");
         }

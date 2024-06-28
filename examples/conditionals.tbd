@@ -9,5 +9,6 @@ fn fact(n:integer) -> integer {
     a
 }
 
-k : integer = fact(4)
+
+k : integer = fact(1)
 pint k
