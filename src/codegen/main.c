@@ -56,7 +56,7 @@ CodegenContext *codegen_context_create(CodegenContext *parent) {
 char *label_generate() {
     char *label = CG_LABEL_BUFFER + label_index;
     label_index += snprintf(label, CG_LABEL_BUFFER_LENGTH - label_index,
-                            ".L%ld", label_count);
+                            ".L%lld", label_count);
     label_index++;
     if (label_index >= CG_LABEL_BUFFER_LENGTH) {
         label_index = 0;

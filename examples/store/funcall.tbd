@@ -1,4 +1,4 @@
-fn foo(i: integer):integer{
+fn foo(i: integer) -> integer{
     i*2
 }
 

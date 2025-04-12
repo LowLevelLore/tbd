@@ -1,14 +1,12 @@
-fn fact(n:integer) -> integer {
-    a : integer
-    if n < 2 { 
+fn fact(n: integer) -> integer {
+    a: integer
+    if n < 2 {
         a := 1
+    } else {
+        a := n * fact(n - 1)
     }
-    else {
-        a := n*fact(n - 1)
-    }
-    a
+    return a
 }
 
-
-k : integer = fact(1)
+k : integer = fact(2)
 pint k

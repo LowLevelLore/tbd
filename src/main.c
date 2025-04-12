@@ -18,7 +18,8 @@ int file_size(FILE *file) {
 }
 
 char *file_contents(char *filepath) {
-    FILE *file = fopen(filepath, "r");
+    FILE *file;
+    fopen_s(&file, filepath, "rb");
     if (!file) {
         char *message = (char *)malloc(400 * sizeof(char));
         if (!message) {
@@ -32,7 +33,7 @@ char *file_contents(char *filepath) {
         int size = file_size(file);
         char *contents = (char *)malloc((size + 1) * sizeof(char));
         size_t bytes_read = fread(contents, 1, size, file);
-        if (bytes_read != (size_t)size) {
+        if (bytes_read != (size_t) size) {
             free(contents);
             return NULL;
         } else {
